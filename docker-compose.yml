@@ -1,0 +1,86 @@
+services:
+  scrapyd1:
+    build:
+      context: .
+      dockerfile: Dockerfile.scrapyd
+    container_name: scrapyd1
+    environment:
+      - SCRAPYD_EGGS_DIR=/root/.scrapyd/eggs
+    ports:
+      - "6800:6800"
+    volumes:
+      - ./shared-eggs:/root/.scrapyd/eggs
+      - ./deploy_eggs.sh:/deploy_eggs.sh
+    entrypoint: /deploy_eggs.sh
+    networks:
+      - scraper-network
+
+  scrapyd2:
+    build:
+      context: .
+      dockerfile: Dockerfile.scrapyd
+    container_name: scrapyd2
+    environment:
+      - SCRAPYD_EGGS_DIR=/root/.scrapyd/eggs
+    ports:
+      - "6801:6800"
+    volumes:
+      - ./shared-eggs:/root/.scrapyd/eggs
+      - ./deploy_eggs.sh:/deploy_eggs.sh
+    entrypoint: /deploy_eggs.sh
+    networks:
+      - scraper-network
+
+  scrapydweb:
+    image: scrapydweb:latest
+    container_name: scrapydweb
+    depends_on:
+      - scrapyd1
+      - scrapyd2
+    volumes:
+      - ./scrapydweb_settings_v11.py:/app/scrapydweb_settings_v11.py
+    ports:
+      - "5000:5000"
+    networks:
+      - scraper-network
+
+  # ───────────────────────────────────────
+  selenium-hub:
+    image: selenium/standalone-chrome:114.0
+    container_name: selenium-hub
+    ports:
+      - "4444:4444"
+    networks:
+      - scraper-network
+    environment:
+      - SE_NODE_MAX_SESSIONS=4
+      - SE_NODE_SESSION_TIMEOUT=300
+      - SE_NODE_OVERRIDE_MAX_SESSIONS=true
+    shm_size: 2gb
+
+  # 
+
+  load-balancer:
+    image: nginx:latest
+    container_name: load-balancer
+    ports:
+      - "8800:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - scrapyd1
+      - scrapyd2
+    networks:
+      - scraper-network
+
+networks:
+  scraper-network:
+    driver: bridge
+
+volumes:
+  shared-eggs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./shared-eggs

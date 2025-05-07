@@ -1,0 +1,30 @@
+FROM vimagick/scrapyd:latest
+
+# Install Python dependencies
+RUN pip install --no-cache-dir \
+    selenium==4.13.0 \
+    requests \
+    Uberegg
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    wget \
+    unzip \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install scrapydweb with logparser
+RUN pip install scrapydweb[logparser]
+
+# Create directory for custom code
+RUN mkdir -p /app/custom_middleware
+
+# Create shared eggs dir and set permissions
+# RUN mkdir -p /root/.scrapyd/eggs && \
+#    chown -R scrapyd:scrapyd /root/.scrapyd
+
+# Set working directory
+WORKDIR /app
+
+# Default command remains the same (provided by base image)

@@ -1,0 +1,6 @@
+Metadata-Version: 2.4
+Name: demo
+Version: 1.0
+Requires-Dist: scrapy>=2.12.0
+Requires-Dist: selenium>=4.13.0
+Dynamic: requires-dist

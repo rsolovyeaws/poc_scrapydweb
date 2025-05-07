@@ -1,0 +1,13 @@
+setup.py
+demo/__init__.py
+demo/items.py
+demo/middlewares.py
+demo/pipelines.py
+demo/settings.py
+demo.egg-info/PKG-INFO
+demo.egg-info/SOURCES.txt
+demo.egg-info/dependency_links.txt
+demo.egg-info/entry_points.txt
+demo.egg-info/top_level.txt
+demo/spiders/__init__.py
+demo/spiders/quotes_spa.py

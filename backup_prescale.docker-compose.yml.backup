@@ -1,0 +1,42 @@
+services:
+  scrapyd:
+    build:
+      context: .
+      dockerfile: Dockerfile.scrapyd  # This is your custom Dockerfile
+    container_name: scrapyd
+    ports:
+      - "6800:6800"
+    depends_on:
+      - selenium-hub
+    networks:
+      - scraper-network
+
+  scrapydweb:
+    image: scrapydweb:latest
+    container_name: scrapydweb
+    depends_on:
+      - scrapyd
+    working_dir: /app
+    volumes:
+      - ./scrapydweb_settings_v11.py:/app/scrapydweb_settings_v11.py
+    ports:
+      - "5000:5000"
+    networks:
+      - scraper-network
+      
+  selenium-hub:
+    image: selenium/standalone-chrome:114.0
+    container_name: selenium-hub
+    ports:
+      - "4444:4444"
+    networks:
+      - scraper-network
+    environment:
+      - SE_NODE_MAX_SESSIONS=4
+      - SE_NODE_SESSION_TIMEOUT=300
+      - SE_NODE_OVERRIDE_MAX_SESSIONS=true
+    shm_size: 2gb
+    
+networks:
+  scraper-network:
+    driver: bridge

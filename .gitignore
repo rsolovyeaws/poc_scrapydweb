@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+
+# Environment
+.env
+.venv
+
+# IDEs
+.vscode/
+*.suo
