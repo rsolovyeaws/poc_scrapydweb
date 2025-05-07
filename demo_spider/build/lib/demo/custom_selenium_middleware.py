@@ -1,6 +1,5 @@
 """
 Custom Selenium middleware that fixes the 'remote.options' import issue
-Save this in your project as custom_selenium_middleware.py
 """
 from importlib import import_module
 
@@ -34,58 +33,75 @@ class SeleniumMiddleware:
         command_executor: str
             URL of remote server (if using remote webdriver)
         """
-        webdriver_base_path = f'selenium.webdriver.{driver_name}'
+        self.driver_name = driver_name
+        self.driver_executable_path = driver_executable_path
+        self.browser_executable_path = browser_executable_path
+        self.driver_arguments = driver_arguments
+        self.command_executor = command_executor
+        
+        # We'll initialize the driver in process_request instead
+        # so we can add proxy settings per request
+        self.driver = None
+
+    def _create_driver(self, proxy=None):
+        """Create a WebDriver instance with optional proxy settings"""
+        webdriver_base_path = f'selenium.webdriver.{self.driver_name}'
 
         # Import driver options class
-        if driver_name == 'remote':
+        if self.driver_name == 'remote':
             # For remote, we'll use Chrome options since most remote drivers are Chrome
-            self.driver_options = ChromeOptions()
+            driver_options = ChromeOptions()
         else:
             try:
                 driver_options_module = import_module(f'{webdriver_base_path}.options')
                 driver_options_class = getattr(driver_options_module, 'Options')
-                self.driver_options = driver_options_class()
+                driver_options = driver_options_class()
             except (ImportError, AttributeError):
                 # Some drivers like Chrome and Firefox have different option structures
-                if driver_name == 'chrome':
-                    self.driver_options = ChromeOptions()
-                elif driver_name == 'firefox':
-                    self.driver_options = FirefoxOptions()
+                if self.driver_name == 'chrome':
+                    driver_options = ChromeOptions()
+                elif self.driver_name == 'firefox':
+                    driver_options = FirefoxOptions()
                 else:
-                    raise NotConfigured(f'Unknown driver: {driver_name}')
+                    raise NotConfigured(f'Unknown driver: {self.driver_name}')
 
         # Set arguments for the driver
-        if driver_arguments:
-            for argument in driver_arguments:
-                self.driver_options.add_argument(argument)
+        if self.driver_arguments:
+            for argument in self.driver_arguments:
+                driver_options.add_argument(argument)
+
+        # Add proxy if specified
+        if proxy:
+            driver_options.add_argument(f'--proxy-server={proxy}')
 
         # Set browser executable path
-        if browser_executable_path:
-            self.driver_options.binary_location = browser_executable_path
+        if self.browser_executable_path:
+            driver_options.binary_location = self.browser_executable_path
 
         # Initialize the driver
-        if driver_name == 'remote':
-            capabilities = self.driver_options.to_capabilities()
-            self.driver = webdriver.Remote(
-                command_executor=command_executor,
-                options=self.driver_options
+        if self.driver_name == 'remote':
+            driver = webdriver.Remote(
+                command_executor=self.command_executor,
+                options=driver_options
             )
         else:
-            driver_class = getattr(webdriver, driver_name.capitalize())
+            driver_class = getattr(webdriver, self.driver_name.capitalize())
             driver_kwargs = {
-                'executable_path': driver_executable_path,
-                'options': self.driver_options,
+                'executable_path': self.driver_executable_path,
+                'options': driver_options,
             }
-            if driver_name == 'firefox':
+            if self.driver_name == 'firefox':
                 from selenium.webdriver.firefox.service import Service
-                driver_kwargs['service'] = Service(driver_executable_path)
+                driver_kwargs['service'] = Service(self.driver_executable_path)
                 driver_kwargs.pop('executable_path')
-            elif driver_name == 'chrome':
+            elif self.driver_name == 'chrome':
                 from selenium.webdriver.chrome.service import Service
-                driver_kwargs['service'] = Service(driver_executable_path)
+                driver_kwargs['service'] = Service(self.driver_executable_path)
                 driver_kwargs.pop('executable_path')
             
-            self.driver = driver_class(**driver_kwargs)
+            driver = driver_class(**driver_kwargs)
+            
+        return driver
 
     @classmethod
     def from_crawler(cls, crawler):
@@ -95,14 +111,9 @@ class SeleniumMiddleware:
         browser_executable_path = crawler.settings.get('SELENIUM_BROWSER_EXECUTABLE_PATH')
         driver_arguments = crawler.settings.get('SELENIUM_DRIVER_ARGUMENTS')
         command_executor = crawler.settings.get('SELENIUM_COMMAND_EXECUTOR')
-        driver_capabilities = crawler.settings.get('SELENIUM_DRIVER_CAPABILITIES')
 
         if not driver_name:
             raise NotConfigured('SELENIUM_DRIVER_NAME must be set')
-
-        # If we're using a remote driver and have specific capabilities
-        if driver_name == 'remote' and driver_capabilities:
-            webdriver.Remote
 
         middleware = cls(
             driver_name=driver_name,
@@ -121,6 +132,19 @@ class SeleniumMiddleware:
         if not request.meta.get('selenium'):
             return None
 
+        # Get proxy from meta if available
+        proxy = request.meta.get('selenium_proxy')
+        if proxy:
+            spider.logger.info(f"Using Selenium proxy: {proxy}")
+            
+        # Close existing driver if it exists
+        if self.driver:
+            self.driver.quit()
+            
+        # Create a new driver with optional proxy
+        self.driver = self._create_driver(proxy)
+        
+        # Get the page
         self.driver.get(request.url)
 
         # Wait for JavaScript to execute if needed
@@ -128,6 +152,9 @@ class SeleniumMiddleware:
             self.driver.implicitly_wait(request.meta.get('wait_time'))
 
         body = str.encode(self.driver.page_source)
+
+        # Don't quit the driver here, we'll reuse it for subsequent requests
+        # within the same spider job with the same proxy settings
 
         # Expose the driver to the response
         return HtmlResponse(
@@ -137,6 +164,7 @@ class SeleniumMiddleware:
             request=request
         )
 
-    def spider_closed(self):
+    def spider_closed(self, spider):
         """Shutdown the driver when spider is closed"""
-        self.driver.quit()
+        if self.driver:
+            self.driver.quit()

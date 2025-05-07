@@ -58,8 +58,7 @@ services:
       - SE_NODE_OVERRIDE_MAX_SESSIONS=true
     shm_size: 2gb
 
-  # 
-
+  # ───────────────────────────────────────
   load-balancer:
     image: nginx:latest
     container_name: load-balancer
@@ -70,6 +69,16 @@ services:
     depends_on:
       - scrapyd1
       - scrapyd2
+    networks:
+      - scraper-network
+  
+  # ───────────────────────────────────────
+  tinyproxy:
+    image: dannydirect/tinyproxy:latest
+    container_name: tinyproxy
+    ports:
+      - "8888:8888"
+    command: ["ANY"]  # This allows unrestricted access (for testing)
     networks:
       - scraper-network
 
