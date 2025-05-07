@@ -4,6 +4,11 @@ from scrapy.spiders import Spider
 class QuotesSpaSpider(Spider):
     name = "quotes_spa"
     start_urls = ["https://quotes.toscrape.com/js/"]
+    custom_settings = {
+        'ITEM_PIPELINES': {
+            'demo.pipelines.PostgresPipeline': 300,
+        }
+    }
     
     def __init__(self, *args, **kwargs):
         # Extract proxy from parameters if provided
@@ -16,8 +21,9 @@ class QuotesSpaSpider(Spider):
     def start_requests(self):
         for url in self.start_urls:
             meta = {
-                'selenium': True,  # This flag tells our middleware to use Selenium
-                'wait_time': 2,    # Wait for JavaScript to load
+                'selenium': True,   # This flag tells our middleware to use Selenium
+                'wait_time': 2,     # Wait for JavaScript to load
+                'current_url': url, # Track current URL for database logging
             }
             
             # Add proxy to meta if specified
@@ -32,11 +38,15 @@ class QuotesSpaSpider(Spider):
             )
 
     def parse(self, response):
+        # Store current URL for the pipeline
+        self.current_url = response.url
+        
         for quote in response.css("div.quote"):
             yield {
                 "text": quote.css("span.text::text").get(),
                 "author": quote.css("small.author::text").get(),
                 "tags": quote.css("div.tags a.tag::text").getall(),
+                "url": response.url,  # Include source URL in data
             }
             
         # Follow pagination links if they exist
@@ -48,6 +58,7 @@ class QuotesSpaSpider(Spider):
             meta = {
                 'selenium': True,
                 'wait_time': 2,
+                'current_url': next_page_url,
             }
             if hasattr(self, 'proxy') and self.proxy:
                 meta['proxy'] = self.proxy

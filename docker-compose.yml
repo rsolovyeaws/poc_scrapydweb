@@ -58,6 +58,37 @@ services:
       - SE_NODE_OVERRIDE_MAX_SESSIONS=true
     shm_size: 2gb
 
+  # Database container to store scraping results
+  postgres:
+    image: postgres:15
+    container_name: scraper-db
+    restart: always
+    environment:
+      - POSTGRES_PASSWORD=scraper_password
+      - POSTGRES_USER=scraper_user
+      - POSTGRES_DB=scraper_data
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
+    networks:
+      - scraper-network
+
+  # Optional: Database admin UI
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@example.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - scraper-network
+
   # ───────────────────────────────────────
   load-balancer:
     image: nginx:latest
@@ -93,3 +124,5 @@ volumes:
       type: none
       o: bind
       device: ./shared-eggs
+  postgres_data:
+    driver: local
