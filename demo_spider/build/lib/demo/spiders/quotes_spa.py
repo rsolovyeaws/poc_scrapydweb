@@ -4,16 +4,31 @@ from scrapy.spiders import Spider
 class QuotesSpaSpider(Spider):
     name = "quotes_spa"
     start_urls = ["https://quotes.toscrape.com/js/"]
+    
+    def __init__(self, *args, **kwargs):
+        # Extract proxy from parameters if provided
+        self.proxy = kwargs.get('proxy')
+        super(QuotesSpaSpider, self).__init__(*args, **kwargs)
+        
+        if self.proxy:
+            self.logger.info(f"Spider initialized with proxy: {self.proxy}")
 
     def start_requests(self):
         for url in self.start_urls:
+            meta = {
+                'selenium': True,  # This flag tells our middleware to use Selenium
+                'wait_time': 2,    # Wait for JavaScript to load
+            }
+            
+            # Add proxy to meta if specified
+            if self.proxy:
+                meta['proxy'] = self.proxy  # For standard Scrapy proxy middleware
+                meta['selenium_proxy'] = self.proxy  # For our custom Selenium middleware
+                
             yield scrapy.Request(
                 url=url, 
                 callback=self.parse,
-                meta={
-                    'selenium': True,  # This flag tells our middleware to use Selenium
-                    'wait_time': 2,    # Wait for JavaScript to load
-                }
+                meta=meta
             )
 
     def parse(self, response):
@@ -28,11 +43,18 @@ class QuotesSpaSpider(Spider):
         next_page = response.css("li.next a::attr(href)").get()
         if next_page is not None:
             next_page_url = response.urljoin(next_page)
+            
+            # Make sure to also include the proxy in pagination requests
+            meta = {
+                'selenium': True,
+                'wait_time': 2,
+            }
+            if hasattr(self, 'proxy') and self.proxy:
+                meta['proxy'] = self.proxy
+                meta['selenium_proxy'] = self.proxy
+                
             yield scrapy.Request(
                 url=next_page_url, 
                 callback=self.parse,
-                meta={
-                    'selenium': True,
-                    'wait_time': 2,
-                }
+                meta=meta
             )

@@ -107,7 +107,8 @@ SELENIUM_DRIVER_CAPABILITIES = {
 
 # Use our custom middleware instead of the package one
 DOWNLOADER_MIDDLEWARES = {
-    "demo.custom_selenium_middleware.SeleniumMiddleware": 800
+    "demo.custom_selenium_middleware.SeleniumMiddleware": 800,
+    "scrapy.downloadermiddlewares.httpproxy.HttpProxyMiddleware": 750
 }
 
 ROBOTSTXT_OBEY = False
