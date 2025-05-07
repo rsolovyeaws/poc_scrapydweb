@@ -89,8 +89,13 @@ NEWSPIDER_MODULE = "demo.spiders"
 TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
 FEED_EXPORT_ENCODING = "utf-8"
 
+# Database settings
+POSTGRES_DB = 'scraper_data'
+POSTGRES_USER = 'scraper_user'
+POSTGRES_PASSWORD = 'scraper_password'
+POSTGRES_HOST = 'postgres'
+POSTGRES_PORT = 5432
 
-# --- Selenium ---
 # --- Selenium (remote hub) ---
 SELENIUM_DRIVER_NAME = "remote"
 SELENIUM_COMMAND_EXECUTOR = "http://selenium-hub:4444/wd/hub"  # Use container name in docker network
