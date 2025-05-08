@@ -1,170 +1,162 @@
 """
-Custom Selenium middleware that fixes the 'remote.options' import issue
+Selenium middleware (remote-hub friendly) with driver pool ✔
 """
-from importlib import import_module
+
+import queue
+import time
+from urllib.parse import urlparse
 
 from scrapy import signals
-from scrapy.exceptions import NotConfigured
+from scrapy.exceptions import IgnoreRequest, NotConfigured
 from scrapy.http import HtmlResponse
-from selenium.webdriver.chrome.options import Options as ChromeOptions
-from selenium.webdriver.firefox.options import Options as FirefoxOptions
-from selenium.webdriver.remote.webdriver import WebDriver
 from selenium import webdriver
+from selenium.common.exceptions import NoSuchDriverException
+from selenium.webdriver.chrome.options import Options as ChromeOptions
 
 
-class SeleniumMiddleware:
-    """Scrapy middleware handling the requests using Selenium"""
-
-    def __init__(self, driver_name, driver_executable_path,
-                 driver_arguments, browser_executable_path,
-                 command_executor):
-        """Initialize the selenium webdriver
-
-        Parameters
-        ----------
-        driver_name: str
-            The selenium ``WebDriver`` to use
-        driver_executable_path: str
-            The path of the executable binary of the driver
-        driver_arguments: list
-            A list of arguments to initialize the driver
-        browser_executable_path: str
-            The path of the executable binary of the browser
-        command_executor: str
-            URL of remote server (if using remote webdriver)
-        """
-        self.driver_name = driver_name
-        self.driver_executable_path = driver_executable_path
-        self.browser_executable_path = browser_executable_path
-        self.driver_arguments = driver_arguments
-        self.command_executor = command_executor
-        
-        # We'll initialize the driver in process_request instead
-        # so we can add proxy settings per request
-        self.driver = None
-
-    def _create_driver(self, proxy=None):
-        """Create a WebDriver instance with optional proxy settings"""
-        webdriver_base_path = f'selenium.webdriver.{self.driver_name}'
-
-        # Import driver options class
-        if self.driver_name == 'remote':
-            # For remote, we'll use Chrome options since most remote drivers are Chrome
-            driver_options = ChromeOptions()
-        else:
-            try:
-                driver_options_module = import_module(f'{webdriver_base_path}.options')
-                driver_options_class = getattr(driver_options_module, 'Options')
-                driver_options = driver_options_class()
-            except (ImportError, AttributeError):
-                # Some drivers like Chrome and Firefox have different option structures
-                if self.driver_name == 'chrome':
-                    driver_options = ChromeOptions()
-                elif self.driver_name == 'firefox':
-                    driver_options = FirefoxOptions()
-                else:
-                    raise NotConfigured(f'Unknown driver: {self.driver_name}')
-
-        # Set arguments for the driver
-        if self.driver_arguments:
-            for argument in self.driver_arguments:
-                driver_options.add_argument(argument)
-
-        # Add proxy if specified
-        if proxy:
-            driver_options.add_argument(f'--proxy-server={proxy}')
-
-        # Set browser executable path
-        if self.browser_executable_path:
-            driver_options.binary_location = self.browser_executable_path
-
-        # Initialize the driver
-        if self.driver_name == 'remote':
-            driver = webdriver.Remote(
-                command_executor=self.command_executor,
-                options=driver_options
+# ───────── helpers ─────────────────────────────────────────────────────────
+def _inject_cookies(driver, cookies, domain, log):
+    if not cookies:
+        return
+    driver.get(f"https://{domain}")
+    time.sleep(0.3)
+    added = 0
+    for c in cookies:
+        try:
+            driver.add_cookie(
+                {
+                    "name": c["name"],
+                    "value": c["value"],
+                    "domain": domain,
+                    "path": c.get("path", "/"),
+                }
             )
-        else:
-            driver_class = getattr(webdriver, self.driver_name.capitalize())
-            driver_kwargs = {
-                'executable_path': self.driver_executable_path,
-                'options': driver_options,
-            }
-            if self.driver_name == 'firefox':
-                from selenium.webdriver.firefox.service import Service
-                driver_kwargs['service'] = Service(self.driver_executable_path)
-                driver_kwargs.pop('executable_path')
-            elif self.driver_name == 'chrome':
-                from selenium.webdriver.chrome.service import Service
-                driver_kwargs['service'] = Service(self.driver_executable_path)
-                driver_kwargs.pop('executable_path')
-            
-            driver = driver_class(**driver_kwargs)
-            
-        return driver
+            added += 1
+        except Exception as exc:  # noqa: BLE001
+            log.debug(f"Cookie inject failed {c['name']}: {exc}")
+    log.info(f"SeleniumMiddleware: injected {added} cookies")
 
+
+class _DriverPool:
+    """Thread-safe pool."""
+
+    def __init__(self, size, make_driver, spider):
+        self._size = size
+        self._make = make_driver
+        self._spider = spider
+        self._q = queue.Queue(maxsize=size)
+        self._all = []
+        for _ in range(size):
+            d = self._spawn()
+            self._q.put(d)
+            self._all.append(d)
+
+    def _spawn(self):
+        d = self._make()
+        if getattr(self._spider, "cookies", None):
+            dom = urlparse(self._spider.start_urls[0]).netloc
+            _inject_cookies(d, self._spider.cookies, dom, self._spider.logger)
+            d.refresh()
+        return d
+
+    def acquire(self):
+        return self._q.get()
+
+    def release(self, d):
+        self._q.put(d)
+
+    def shutdown(self):
+        for d in self._all:
+            try:
+                d.quit()
+            except Exception:  # noqa: BLE001
+                pass
+        self._all.clear()
+
+
+# ───────── middleware ─────────────────────────────────────────────────────
+class SeleniumMiddleware:
+    def __init__(
+        self,
+        crawler,
+        command_executor,
+        driver_args,
+        pool_size,
+    ):
+        self.crawler = crawler
+        self.command_executor = command_executor
+        self.driver_args = driver_args or []
+        self.pool_size = pool_size
+        self.pool = None
+
+    # ---- driver factory --------------------------------------------------
+    def _make_options(self):
+        o = ChromeOptions()
+        for a in self.driver_args:
+            o.add_argument(a)
+        o.add_argument("--no-sandbox")
+        o.add_argument("--disable-dev-shm-usage")
+        return o
+
+    def _spawn_driver(self):
+        return webdriver.Remote(
+            command_executor=self.command_executor,
+            options=self._make_options(),
+        )
+
+    # ---- Scrapy plumbing -------------------------------------------------
     @classmethod
     def from_crawler(cls, crawler):
-        """Initialize the middleware with the crawler settings"""
-        driver_name = crawler.settings.get('SELENIUM_DRIVER_NAME')
-        driver_executable_path = crawler.settings.get('SELENIUM_DRIVER_EXECUTABLE_PATH')
-        browser_executable_path = crawler.settings.get('SELENIUM_BROWSER_EXECUTABLE_PATH')
-        driver_arguments = crawler.settings.get('SELENIUM_DRIVER_ARGUMENTS')
-        command_executor = crawler.settings.get('SELENIUM_COMMAND_EXECUTOR')
+        s = crawler.settings
+        cmd_exec = s.get("SELENIUM_COMMAND_EXECUTOR")
+        if not cmd_exec:
+            raise NotConfigured("SELENIUM_COMMAND_EXECUTOR missing")
+        pool_size = int(s.get("SELENIUM_DRIVER_POOL_SIZE", 1))
+        driver_args = s.getlist("SELENIUM_DRIVER_ARGUMENTS")
+        obj = cls(crawler, cmd_exec, driver_args, pool_size)
+        crawler.signals.connect(obj._on_spider_closed, signals.spider_closed)
+        return obj
 
-        if not driver_name:
-            raise NotConfigured('SELENIUM_DRIVER_NAME must be set')
+    # Pool helper
+    def _pool(self, spider):
+        if self.pool is None:
+            self.pool = _DriverPool(self.pool_size, self._spawn_driver, spider)
+        return self.pool
 
-        middleware = cls(
-            driver_name=driver_name,
-            driver_executable_path=driver_executable_path,
-            driver_arguments=driver_arguments,
-            browser_executable_path=browser_executable_path,
-            command_executor=command_executor
-        )
-
-        crawler.signals.connect(middleware.spider_closed, signals.spider_closed)
-
-        return middleware
-
+    # ---- request / response hooks ---------------------------------------
     def process_request(self, request, spider):
-        """Process a request using the selenium driver if applicable"""
-        if not request.meta.get('selenium'):
+        if not request.meta.get("selenium"):
             return None
 
-        # Get proxy from meta if available
-        proxy = request.meta.get('selenium_proxy')
-        if proxy:
-            spider.logger.info(f"Using Selenium proxy: {proxy}")
-            
-        # Close existing driver if it exists
-        if self.driver:
-            self.driver.quit()
-            
-        # Create a new driver with optional proxy
-        self.driver = self._create_driver(proxy)
-        
-        # Get the page
-        self.driver.get(request.url)
+        pool = self._pool(spider)
+        try:
+            driver = pool.acquire()
+        except NoSuchDriverException as exc:
+            raise IgnoreRequest from exc
 
-        # Wait for JavaScript to execute if needed
-        if request.meta.get('wait_time'):
-            self.driver.implicitly_wait(request.meta.get('wait_time'))
+        # put driver into spider for convenience
+        spider.set_selenium_driver(driver)
 
-        body = str.encode(self.driver.page_source)
+        driver.get(request.url)
+        time.sleep(request.meta.get("wait_time", 0))
 
-        # Don't quit the driver here, we'll reuse it for subsequent requests
-        # within the same spider job with the same proxy settings
+        body = driver.page_source.encode()
+        response = HtmlResponse(driver.current_url, body=body, encoding="utf-8", request=request)
+        response.meta["driver"] = driver  # for callbacks
+        return response
 
-        # Expose the driver to the response
-        return HtmlResponse(
-            self.driver.current_url,
-            body=body,
-            encoding='utf-8',
-            request=request
-        )
+    def process_response(self, request, response, spider):
+        driver = response.meta.get("driver")
+        if driver:
+            self.pool.release(driver)
+        return response
 
-    def spider_closed(self, spider):
-        """Shutdown the driver when spider is closed"""
-        if self.driver:
-            self.driver.quit()
+    def process_exception(self, request, exception, spider):
+        driver = request.meta.get("driver")
+        if driver:
+            self.pool.release(driver)
+        raise IgnoreRequest from exception
+
+    def _on_spider_closed(self, spider):
+        if self.pool:
+            self.pool.shutdown()
