@@ -1,103 +1,78 @@
-# Define here the models for your spider middleware
-#
-# See documentation in:
-# https://docs.scrapy.org/en/latest/topics/spider-middleware.html
+"""
+demo/middlewares.py
+────────────────────────────────────────────────────────────────────────────
+PersistentCookiesMiddleware
+• Loads cookies at spider start (if they exist on disk).
+• Saves cookies at spider close—but only while the Selenium session is
+  still alive, covering BOTH local and remote WebDriver instances.
+"""
+
+import os
+import pickle
+from pathlib import Path
 
 from scrapy import signals
-
-# useful for handling different item types with a single interface
-from itemadapter import is_item, ItemAdapter
+from scrapy.exceptions import NotConfigured
 
 
-class DemoSpiderMiddleware:
-    # Not all methods need to be defined. If a method is not defined,
-    # scrapy acts as if the spider middleware does not modify the
-    # passed objects.
+class PersistentCookiesMiddleware:
+    def __init__(self, settings):
+        self.dir = settings.get("COOKIES_PERSISTENCE_DIR", "/data/cookies")
+        self.enabled = settings.getbool("COOKIES_PERSISTENCE_ENABLED", True)
+        if self.enabled:
+            Path(self.dir).mkdir(parents=True, exist_ok=True)
 
+    # ─────────────────────────── Scrapy hooks ──────────────────────────
     @classmethod
     def from_crawler(cls, crawler):
-        # This method is used by Scrapy to create your spiders.
-        s = cls()
-        crawler.signals.connect(s.spider_opened, signal=signals.spider_opened)
-        return s
+        if not crawler.settings.getbool("COOKIES_PERSISTENCE_ENABLED", True):
+            raise NotConfigured
+        mw = cls(crawler.settings)
+        crawler.signals.connect(mw.spider_opened, signals.spider_opened)
+        crawler.signals.connect(mw.spider_closed, signals.spider_closed)
+        return mw
 
-    def process_spider_input(self, response, spider):
-        # Called for each response that goes through the spider
-        # middleware and into the spider.
+    # ─────────────────────────── helpers ───────────────────────────────
+    def _filepath(self, spider):
+        return os.path.join(self.dir, f"{spider.name}_cookies.pkl")
 
-        # Should return None or raise an exception.
-        return None
-
-    def process_spider_output(self, response, result, spider):
-        # Called with the results returned from the Spider, after
-        # it has processed the response.
-
-        # Must return an iterable of Request, or item objects.
-        for i in result:
-            yield i
-
-    def process_spider_exception(self, response, exception, spider):
-        # Called when a spider or process_spider_input() method
-        # (from other spider middleware) raises an exception.
-
-        # Should return either None or an iterable of Request or item objects.
-        pass
-
-    def process_start_requests(self, start_requests, spider):
-        # Called with the start requests of the spider, and works
-        # similarly to the process_spider_output() method, except
-        # that it doesn’t have a response associated.
-
-        # Must return only requests (not items).
-        for r in start_requests:
-            yield r
-
+    # ─────────────────────────── events ────────────────────────────────
     def spider_opened(self, spider):
-        spider.logger.info("Spider opened: %s" % spider.name)
+        fp = self._filepath(spider)
+        if os.path.exists(fp):
+            try:
+                with open(fp, "rb") as fh:
+                    spider.cookies = pickle.load(fh)
+                spider.logger.info(f"Loaded {len(spider.cookies)} cookies")
+            except Exception as exc:  # noqa: BLE001
+                spider.logger.error(f"Cookie load error: {exc}")
+                spider.cookies = []
+        else:
+            spider.cookies = []
 
+    def spider_closed(self, spider):
+        """
+        Save cookies only if the WebDriver session is still reachable.
+        Works for both local (Chrome/Gecko) and remote drivers.
+        """
+        driver = getattr(spider, "selenium_driver", None)
 
-class DemoDownloaderMiddleware:
-    # Not all methods need to be defined. If a method is not defined,
-    # scrapy acts as if the downloader middleware does not modify the
-    # passed objects.
+        # 1. driver attr missing or already quit → skip saving
+        if driver is None or getattr(driver, "session_id", None) is None:
+            return
 
-    @classmethod
-    def from_crawler(cls, crawler):
-        # This method is used by Scrapy to create your spiders.
-        s = cls()
-        crawler.signals.connect(s.spider_opened, signal=signals.spider_opened)
-        return s
+        # 2. lightweight ping to confirm the session is still alive
+        try:
+            driver.execute("getLog", {"type": "browser"})
+        except Exception:  # session is gone (local or remote)
+            return
 
-    def process_request(self, request, spider):
-        # Called for each request that goes through the downloader
-        # middleware.
-
-        # Must either:
-        # - return None: continue processing this request
-        # - or return a Response object
-        # - or return a Request object
-        # - or raise IgnoreRequest: process_exception() methods of
-        #   installed downloader middleware will be called
-        return None
-
-    def process_response(self, request, response, spider):
-        # Called with the response returned from the downloader.
-
-        # Must either;
-        # - return a Response object
-        # - return a Request object
-        # - or raise IgnoreRequest
-        return response
-
-    def process_exception(self, request, exception, spider):
-        # Called when a download handler or a process_request()
-        # (from other downloader middleware) raises an exception.
-
-        # Must either:
-        # - return None: continue processing this exception
-        # - return a Response object: stops process_exception() chain
-        # - return a Request object: stops process_exception() chain
-        pass
-
-    def spider_opened(self, spider):
-        spider.logger.info("Spider opened: %s" % spider.name)
+        # 3. session alive → dump cookies
+        try:
+            cookies = driver.get_cookies() or []
+            if cookies:
+                with open(self._filepath(spider), "wb") as fh:
+                    pickle.dump(cookies, fh)
+                spider.logger.info(f"Saved {len(cookies)} cookies")
+        except Exception as exc:  # noqa: BLE001
+            spider.logger.error(f"Cookie save error: {exc}")

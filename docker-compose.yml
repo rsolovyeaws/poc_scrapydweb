@@ -11,6 +11,7 @@ services:
     volumes:
       - ./shared-eggs:/root/.scrapyd/eggs
       - ./deploy_eggs.sh:/deploy_eggs.sh
+      - ./data/cookies:/data/cookies  # Volume for persistent cookies
     entrypoint: /deploy_eggs.sh
     networks:
       - scraper-network
@@ -27,6 +28,7 @@ services:
     volumes:
       - ./shared-eggs:/root/.scrapyd/eggs
       - ./deploy_eggs.sh:/deploy_eggs.sh
+      - ./data/cookies:/data/cookies  # Volume for persistent cookies
     entrypoint: /deploy_eggs.sh
     networks:
       - scraper-network
@@ -56,6 +58,8 @@ services:
       - SE_NODE_MAX_SESSIONS=4
       - SE_NODE_SESSION_TIMEOUT=300
       - SE_NODE_OVERRIDE_MAX_SESSIONS=true
+    volumes:
+      - ./data/cookies:/data/cookies  # Volume for persistent cookies
     shm_size: 2gb
 
   # Database container to store scraping results
