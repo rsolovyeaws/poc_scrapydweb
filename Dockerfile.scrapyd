@@ -16,7 +16,9 @@ RUN pip install --no-cache-dir --break-system-packages \
     selenium==4.13.0 \
     requests \
     Uberegg \
-    psycopg2-binary
+    psycopg2-binary \
+    boto3 \
+    botocore
 
 # Install scrapydweb with logparser
 RUN pip install --break-system-packages scrapydweb[logparser]
