@@ -1,9 +1,11 @@
 setup.py
 demo/__init__.py
+demo/cookie_api_example.py
 demo/custom_selenium_middleware.py
 demo/items.py
 demo/middlewares.py
 demo/pipelines.py
+demo/redis_cookies_middleware.py
 demo/settings.py
 demo.egg-info/PKG-INFO
 demo.egg-info/SOURCES.txt

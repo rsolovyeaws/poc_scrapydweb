@@ -2,3 +2,6 @@ scrapy==2.12.0
 selenium==4.13.0
 setuptools>=45
 Uberegg
+redis==5.0.1
+boto3==1.33.1
+botocore==1.33.1
