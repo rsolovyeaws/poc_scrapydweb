@@ -186,6 +186,53 @@ services:
       - scraper-network
 
   # ───────────────────────────────────────
+  # MESSAGE QUEUE INTEGRATION
+  # ───────────────────────────────────────
+
+  # RabbitMQ for task distribution
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: scraper-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    networks:
+      - scraper-network
+    healthcheck:
+      test: [ "CMD", "rabbitmqctl", "status" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Task processor service for consuming messages from RabbitMQ
+  task-processor:
+    build:
+      context: ./task-processor
+      dockerfile: Dockerfile
+    container_name: task-processor
+    depends_on:
+      - rabbitmq
+      - scrapyd1
+      - scrapyd2
+      - api-gateway
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
+      - RABBITMQ_QUEUE=scraper_tasks
+      - API_GATEWAY_URL=http://api-gateway:5000
+    networks:
+      - scraper-network
+    restart: unless-stopped
+
+  # ───────────────────────────────────────
   # MONITORING AND LOGGING STACK
   # ───────────────────────────────────────
 
@@ -383,4 +430,6 @@ volumes:
   prometheus_data:
     driver: local
   grafana_data:
+    driver: local
+  rabbitmq_data:
     driver: local
