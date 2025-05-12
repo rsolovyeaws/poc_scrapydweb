@@ -105,7 +105,9 @@ for i in $(seq 1 $JOB_COUNT); do
             "CLOSESPIDER_TIMEOUT": "120",
             "LOG_LEVEL": "INFO"
           },
-          "auth_enabled": false
+          "auth_enabled": "false",
+          "username": "admin",
+          "password": "admin"
         }')
     
     status=$(echo $response | jq -r '.status')

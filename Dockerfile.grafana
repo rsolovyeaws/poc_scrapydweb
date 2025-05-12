@@ -1,0 +1,19 @@
+FROM grafana/grafana:9.5.2
+
+USER root
+
+# Copy dashboard provisioning
+COPY ./grafana/dashboards /etc/grafana/provisioning/dashboards
+COPY ./grafana/datasources /etc/grafana/provisioning/datasources
+
+# Set permissions
+RUN chown -R grafana:grafana /etc/grafana/provisioning/
+
+USER grafana
+
+RUN mkdir -p /var/lib/grafana/dashboards
+COPY grafana-dashboards/*.json /var/lib/grafana/dashboards/
+
+# Нет необходимости явно менять владельца, т.к. базовый образ 
+# уже настроен на правильные разрешения
+# grafana/grafana уже запускается от имени пользователя grafana 
