@@ -107,6 +107,31 @@ services:
     networks:
       - scraper-network
 
+  # API Gateway for automatic task distribution
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    ports:
+      - "5001:5000"
+    depends_on:
+      - scrapyd1
+      - scrapyd2
+      - redis
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+    networks:
+      - scraper-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:5000/status" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
   # ───────────────────────────────────────
   tinyproxy:
     image: dannydirect/tinyproxy:latest
