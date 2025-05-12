@@ -1,0 +1,35 @@
+filebeat.inputs:
+- type: container
+  paths:
+    - '/var/lib/docker/containers/*/*.log'
+  processors:
+    - add_docker_metadata:
+        host: "unix:///var/run/docker.sock"
+    - decode_json_fields:
+        fields: ["message"]
+        target: "json"
+        overwrite_keys: true
+
+processors:
+  - add_host_metadata: ~
+  - add_cloud_metadata: ~
+  - add_docker_metadata: ~
+
+output.elasticsearch:
+  hosts: ["elasticsearch:9200"]
+  indices:
+    - index: "scraper-logs-%{+yyyy.MM.dd}"
+      when.contains:
+        container.image.name: "scrapyd"
+    - index: "selenium-logs-%{+yyyy.MM.dd}"
+      when.contains:
+        container.image.name: "selenium"
+    - index: "gateway-logs-%{+yyyy.MM.dd}"
+      when.contains:
+        container.image.name: "api-gateway"
+    - index: "filebeat-%{+yyyy.MM.dd}"
+
+setup.kibana:
+  host: "kibana:5601"
+
+setup.ilm.enabled: false 
