@@ -86,6 +86,7 @@ curl http://localhost:6800/cancel.json -d project=demo-1.0-py3.10 -d job=custom_
 - [Scrapyd1](http://localhost:6800) - первый экземпляр Scrapyd
 - [Scrapyd2](http://localhost:6801) - второй экземпляр Scrapyd
 - [NGINX балансировщик](http://localhost:8800) - балансировщик нагрузки (в разработке)
+- [API Gateway](http://localhost:5001) - API-шлюз для интеллектуальной балансировки нагрузки и управления заданиями
 
 ## Архитектура
 
@@ -100,6 +101,114 @@ curl http://localhost:6800/cancel.json -d project=demo-1.0-py3.10 -d job=custom_
 7. **tinyproxy** - прокси-сервер для маскировки запросов
 8. **minio** - S3-совместимое хранилище для файлов
 9. **minio-mc** - утилита для настройки MinIO
+10. **api-gateway** - API-шлюз для управления заданиями и балансировки нагрузки
+11. **redis** - хранилище для сессий и состояния системы
+
+## Улучшенные возможности балансировки нагрузки
+
+### API Gateway для управления заданиями
+
+API Gateway предоставляет унифицированный интерфейс для запуска и мониторинга заданий на всех Scrapyd-инстансах с автоматическим выбором наименее загруженного узла.
+
+#### Проверка статуса API Gateway:
+
+```bash
+./check_api_gateway.sh
+```
+
+#### Пример ответа:
+
+```
+Checking API Gateway at http://localhost:5001...
+✅ API Gateway is running
+
+Scrapyd Instances Status:
+✅ scrapyd1: online (running: 0, pending: 0)
+✅ scrapyd2: online (running: 0, pending: 0)
+
+Example usage:
+  Schedule a spider:  ./api-gateway/client_example.py schedule --project demo --spider example --kwargs='{"url":"https://example.com"}'
+  List jobs:          ./api-gateway/client_example.py list --project demo
+  Cancel a job:       ./api-gateway/client_example.py cancel --project demo --job-id JOB_ID
+```
+
+### Запуск задач через API Gateway
+
+Используйте скрипт `schedule_api.sh` для запуска задач через API Gateway с тем же синтаксисом, что и для прямого обращения к Scrapyd:
+
+```bash
+./schedule_api.sh \
+-d project=demo-1.0-py3.10 \
+-d _version=1_0 \
+-d spider=quotes_spa \
+-d jobid=custom_job_id \
+-d setting=CLOSESPIDER_PAGECOUNT=0 \
+-d setting=CLOSESPIDER_TIMEOUT=60 \
+-d auth_enabled=true \
+-d username=admin \
+-d password=admin \
+-d proxy=http://tinyproxy:8888
+```
+
+### Использование Python-клиента для API Gateway
+
+```bash
+# Проверка статуса всех Scrapyd-инстансов
+python3 api-gateway/client_example.py status
+
+# Запуск паука на наименее загруженном узле
+python3 api-gateway/client_example.py schedule \
+  --project demo-1.0-py3.10 \
+  --spider quotes_spa \
+  --version 1_0 \
+  --setting CLOSESPIDER_TIMEOUT=60 \
+  --auth-enabled \
+  --username admin \
+  --password admin \
+  --proxy http://tinyproxy:8888
+
+# Список всех заданий
+python3 api-gateway/client_example.py list --project demo-1.0-py3.10
+
+# Отмена задания
+python3 api-gateway/client_example.py cancel --project demo-1.0-py3.10 --job-id JOB_ID
+```
+
+### Мониторинг балансировки нагрузки
+
+Для демонстрации и тестирования работы балансировщика используйте скрипт `test_balancer.sh`:
+
+```bash
+# Запуск 3 заданий и мониторинг их выполнения
+./test_balancer.sh --count=3
+```
+
+#### Пример вывода:
+
+```
+=== ТЕСТ БАЛАНСИРОВКИ НАГРУЗКИ ===
+API Gateway: http://localhost:5001
+Проект: demo-1.0-py3.10, Паук: quotes_spa
+Запущено задач: 3
+
+=== СТАТУС SCRAPYD-ИНСТАНСОВ ===
+✓ scrapyd1: 0 задач выполняется, 0 в очереди
+✓ scrapyd2: 0 задач выполняется, 0 в очереди
+
+=== СТАТУС ЗАДАЧ ===
+Узел: scrapyd1
+  Завершено: 2 (последние 3)
+    - 2025-05-12T15_12_12_3 (quotes_spa) - завершена 2025-05-12 13:13:12.291379
+    - 2025-05-12T15_12_08_1 (quotes_spa) - завершена 2025-05-12 13:12:44.918356
+
+Узел: scrapyd2
+  Завершено: 1 (последние 3)
+    - 2025-05-12T15_12_10_2 (quotes_spa) - завершена 2025-05-12 13:13:39.125474
+```
+
+Этот мониторинг обновляется каждые 2 секунды и показывает:
+1. Статус каждого Scrapyd-инстанса (количество выполняемых и ожидающих задач)
+2. Задания в очереди, выполняющиеся задания и недавно завершенные задания для каждого узла
 
 ## Текущее состояние PoC
 
