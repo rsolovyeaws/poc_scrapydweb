@@ -12,6 +12,7 @@
 - **MinIO** - S3-совместимое хранилище
 - **NGINX** - балансировщик нагрузки
 - **TinyProxy** - прокси-сервер для маскировки запросов
+- **RabbitMQ** - система обмена сообщениями для асинхронного запуска пауков
 - **ELK Stack** - Elasticsearch, Kibana и Filebeat для логирования
 - **Prometheus & Grafana** - мониторинг и визуализация метрик
 - **Alertmanager** - отправка уведомлений о событиях
@@ -90,6 +91,7 @@ curl http://localhost:6800/cancel.json -d project=demo-1.0-py3.10 -d job=custom_
 - [Scrapyd2](http://localhost:6801) - второй экземпляр Scrapyd
 - [NGINX балансировщик](http://localhost:8800) - балансировщик нагрузки (в разработке)
 - [API Gateway](http://localhost:5001) - API-шлюз для интеллектуальной балансировки нагрузки и управления заданиями
+- [RabbitMQ Management](http://localhost:15672) - интерфейс управления RabbitMQ (логин: guest/guest)
 - [Kibana](http://localhost:5601) - визуализация и анализ логов
 - [Grafana](http://localhost:3000) - визуализация метрик (логин: admin/admin)
 - [Prometheus](http://localhost:9090) - сбор и хранение метрик
@@ -111,9 +113,11 @@ curl http://localhost:6800/cancel.json -d project=demo-1.0-py3.10 -d job=custom_
 9. **minio-mc** - утилита для настройки MinIO
 10. **api-gateway** - API-шлюз для управления заданиями и балансировки нагрузки
 11. **redis** - хранилище для сессий и состояния системы
-12. **elasticsearch, kibana, filebeat** - стек ELK для сбора и анализа логов
-13. **prometheus, grafana, cadvisor, node-exporter** - система мониторинга метрик
-14. **alertmanager, telegram-alerts** - система оповещений
+12. **rabbitmq** - система обмена сообщениями для асинхронного запуска пауков
+13. **task-processor** - сервис для обработки заданий из очереди RabbitMQ
+14. **elasticsearch, kibana, filebeat** - стек ELK для сбора и анализа логов
+15. **prometheus, grafana, cadvisor, node-exporter** - система мониторинга метрик
+16. **alertmanager, telegram-alerts** - система оповещений
 
 ## Улучшенные возможности балансировки нагрузки
 
@@ -297,6 +301,148 @@ self.logger.info(f"Parsing {response.url}",
                  })
 ```
 
+## Интеграция с очередями сообщений (RabbitMQ)
+
+Система поддерживает асинхронное планирование задач через RabbitMQ. Это позволяет внешним системам отправлять задачи на парсинг без необходимости прямого обращения к Scrapyd или API Gateway.
+
+### Преимущества использования RabbitMQ
+
+- **Децентрализация** - внешние системы могут отправлять задания без прямого доступа к API
+- **Надежность** - сообщения сохраняются в очереди до успешной обработки
+- **Масштабируемость** - очередь может обрабатывать большое количество заданий
+- **Асинхронность** - клиенты могут отправлять задания и продолжать работу, не дожидаясь их выполнения
+
+### Пример отправки задания в RabbitMQ
+
+Пример скрипта для отправки задания на парсинг через RabbitMQ:
+
+```python
+#!/usr/bin/env python3
+import pika
+import json
+import uuid
+
+# Параметры подключения к RabbitMQ
+connection = pika.BlockingConnection(
+    pika.ConnectionParameters(host='localhost', port=5672)
+)
+channel = connection.channel()
+
+# Объявление очереди (если не существует)
+channel.queue_declare(queue='scraper_tasks', durable=True)
+
+# Уникальный ID задания
+task_id = str(uuid.uuid4())
+
+# Задание для паука
+task = {
+    "task_id": task_id,
+    "project": "demo-1.0-py3.10",
+    "spider": "quotes_spa",
+    "settings": {
+        "LOG_LEVEL": "INFO",
+        "CONCURRENT_REQUESTS": 8,
+        "DOWNLOAD_TIMEOUT": 180
+    },
+    "args": {
+        "start_url": "https://example.com"
+    },
+    "priority": 0,
+    "status": "pending"
+}
+
+# Отправка сообщения в очередь
+channel.basic_publish(
+    exchange='',
+    routing_key='scraper_tasks',
+    body=json.dumps(task),
+    properties=pika.BasicProperties(
+        delivery_mode=2,  # сохранять сообщение на диске
+        content_type='application/json',
+        message_id=task_id
+    )
+)
+
+print(f"Задание {task_id} отправлено в очередь")
+connection.close()
+```
+
+### Использование утилиты publish_test_task.py
+
+Для использования утилиты publish_test_task.py необходимо активировать виртуальное окружение:
+
+```bash
+# Активация виртуального окружения
+source ./activate_venv.sh
+
+# Запуск паука с использованием RabbitMQ
+python publish_test_task.py \
+  --host localhost \
+  --port 5672 \
+  --project demo-1.0-py3.10 \
+  --spider quotes_spa \
+  --setting LOG_LEVEL=INFO \
+  --setting DOWNLOAD_TIMEOUT=180 \
+  --arg start_url=https://example.com
+```
+
+При первом использовании необходимо создать виртуальное окружение и установить зависимости:
+
+```bash
+# Создание виртуального окружения
+python3 -m venv .venv
+
+# Активация и установка зависимостей
+source .venv/bin/activate
+
+# Установка всех зависимостей из requirements.txt
+pip install -r requirements.txt
+
+# Или только установка pika для работы с RabbitMQ
+pip install pika
+```
+
+### Использование скрипта schedule_rabbitmq.sh
+
+Мы также предоставляем скрипт `schedule_rabbitmq.sh`, который отправляет задание в RabbitMQ с теми же параметрами, что используются в скрипте `schedule_egg.sh` для прямого запуска через Scrapyd:
+
+```bash
+# Запуск паука с использованием RabbitMQ (с теми же параметрами, что и schedule_egg.sh)
+./schedule_rabbitmq.sh
+```
+
+Скрипт автоматически активирует виртуальное окружение и отправляет сообщение со следующими параметрами:
+- Проект: demo-1.0-py3.10
+- Паук: quotes_spa
+- Настройки:
+  - CLOSESPIDER_PAGECOUNT=0
+  - CLOSESPIDER_TIMEOUT=60
+  - LOG_LEVEL=DEBUG
+- Авторизация: включена (admin/admin)
+- Прокси: http://tinyproxy:8888
+
+Для использования с другими параметрами вы можете отредактировать скрипт или использовать утилиту `publish_rabbitmq_task.py` напрямую:
+
+```bash
+# Активация виртуального окружения
+source .venv/bin/activate
+
+# Запуск с пользовательскими параметрами
+python publish_rabbitmq_task.py \
+  --host localhost \
+  --port 5672 \
+  --project demo-1.0-py3.10 \
+  --spider quotes_spa \
+  --setting "CLOSESPIDER_TIMEOUT=120" \
+  --auth \
+  --username custom_user \
+  --password custom_pass
+```
+
+### Мониторинг заданий
+
+Вы можете мониторить очередь заданий через [RabbitMQ Management Console](http://localhost:15672) (логин: guest/guest), а сами задания отслеживать через стандартный интерфейс [ScrapydWeb](http://localhost:5000).
+
 ## Текущее состояние PoC
 
 Сейчас реализовано:
@@ -306,6 +452,7 @@ self.logger.info(f"Parsing {response.url}",
 - Сохранение данных в PostgreSQL и S3-хранилище
 - Мониторинг работы пауков через ScrapydWeb
 - Интеллектуальная балансировка нагрузки через API Gateway
+- Асинхронное планирование задач через RabbitMQ
 - Всесторонний мониторинг и логирование через ELK и Prometheus/Grafana
 - Система оповещений через Telegram
 
