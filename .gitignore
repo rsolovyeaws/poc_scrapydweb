@@ -12,3 +12,8 @@ node_modules/
 # IDEs
 .vscode/
 *.suo
+
+# cursor rules
+.cursor/rules
+
+# test
