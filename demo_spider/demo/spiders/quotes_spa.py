@@ -21,7 +21,7 @@ class QuotesSpaSpider(scrapy.Spider):
         # middlewares
         "DOWNLOADER_MIDDLEWARES": {
             "demo.custom_selenium_middleware.SeleniumMiddleware": 800,
-            "demo.middlewares.PersistentCookiesMiddleware": 900,
+            "demo.redis_cookies_middleware.RedisCookiesMiddleware": 900,
         },
         # pipelines
         "ITEM_PIPELINES": {
@@ -30,9 +30,13 @@ class QuotesSpaSpider(scrapy.Spider):
         },
         # S3 specific settings (can override project settings)
         "S3_FOLDER_NAME": "quotes_data",
+        # Redis settings
+        "REDIS_HOST": "redis",
+        "REDIS_PORT": 6379,
+        "REDIS_DB": 0,
+        "REDIS_COOKIES_ENABLED": True,
+        "REDIS_COOKIES_KEY_PREFIX": "scrapy:cookies:",
         # misc
-        "COOKIES_PERSISTENCE_ENABLED": True,
-        "COOKIES_PERSISTENCE_DIR": "/data/cookies",
         "CONCURRENT_REQUESTS": 3,
         "CLOSESPIDER_PAGECOUNT": 0,
     }
@@ -85,6 +89,7 @@ class QuotesSpaSpider(scrapy.Spider):
         driver = response.meta["driver"]
         # cookies from previous run?
         if self.cookies:
+            self.logger.debug(f"DEBUG: Found {len(self.cookies)} cookies: {self.cookies}")
             self.is_logged_in = self._is_logged_in(driver)
             if self.is_logged_in:
                 self.logger.info("Cookie jar already logged in")
@@ -94,6 +99,7 @@ class QuotesSpaSpider(scrapy.Spider):
                 WebDriverWait(driver, 5).until(
                     EC.presence_of_element_located((By.ID, "username"))
                 )
+                self.logger.debug(f"DEBUG: Logging in with username={self.username}, password={self.password}")
                 driver.find_element(By.ID, "username").send_keys(self.username)
                 driver.find_element(By.ID, "password").send_keys(self.password)
                 driver.find_element(By.CSS_SELECTOR, "input[type='submit']").click()
@@ -102,7 +108,24 @@ class QuotesSpaSpider(scrapy.Spider):
             except Exception as e:
                 self.logger.error(f"Login automation error: {e}")
             self.is_logged_in = self._is_logged_in(driver)
+        
+        # Get cookies from driver and save them immediately to ensure they're not lost
         self.cookies = driver.get_cookies()
+        self.logger.debug(f"DEBUG: After login, collected {len(self.cookies)} cookies: {self.cookies}")
+        
+        # Manually save cookies to Redis to ensure they're not lost when the driver closes
+        try:
+            if self.cookies and hasattr(self, 'crawler') and hasattr(self.crawler, 'engine'):
+                # Get the Redis middleware instance
+                for middleware in self.crawler.engine.downloader.middleware.middlewares:
+                    if hasattr(middleware, 'redis_client') and hasattr(middleware, '_get_key'):
+                        key = middleware._get_key(self)
+                        import json
+                        middleware.redis_client.set(key, json.dumps(self.cookies))
+                        self.logger.debug(f"DEBUG: Manually saved {len(self.cookies)} cookies to Redis with key {key}")
+                        break
+        except Exception as e:
+            self.logger.error(f"DEBUG: Failed to manually save cookies: {e}")
         
         # Prepare meta with common settings
         meta = {"selenium": True, "wait_time": 1}
@@ -120,13 +143,26 @@ class QuotesSpaSpider(scrapy.Spider):
     
     def _is_logged_in(self, driver):
         try:
+            self.logger.debug("DEBUG: Checking if logged in...")
             WebDriverWait(driver, 3).until(
                 EC.presence_of_element_located((By.XPATH, "//a[contains(@href,'/logout')]"))
             )
-            self.logger.info("Login verified")
+            self.logger.info("Login verified - found logout link")
             return True
-        except (TimeoutException, NoSuchElementException):
-            self.logger.warning("Not logged in")
+        except (TimeoutException, NoSuchElementException) as e:
+            self.logger.warning(f"Not logged in: {e}")
+            
+            # Print the page source to see what's there
+            self.logger.debug(f"DEBUG: Current URL: {driver.current_url}")
+            self.logger.debug(f"DEBUG: Page title: {driver.title}")
+            
+            # Check if there's anything to indicate why login failed
+            try:
+                error_msg = driver.find_element(By.CSS_SELECTOR, ".error").text
+                self.logger.error(f"Login error message: {error_msg}")
+            except:
+                pass
+                
             return False
     
     # ─── parse quotes pages ──────────────────────────────────────────────
