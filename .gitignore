@@ -13,4 +13,6 @@ node_modules/
 .vscode/
 *.suo
 
+# cursor rules
 .cursor/rules
+
