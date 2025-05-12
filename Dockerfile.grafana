@@ -1,7 +1,15 @@
-FROM grafana/grafana:10.0.0
+FROM grafana/grafana:9.5.2
 
-COPY grafana-dashboards /etc/grafana/provisioning/dashboards/
-COPY grafana-datasources /etc/grafana/provisioning/datasources/
+USER root
+
+# Copy dashboard provisioning
+COPY ./grafana/dashboards /etc/grafana/provisioning/dashboards
+COPY ./grafana/datasources /etc/grafana/provisioning/datasources
+
+# Set permissions
+RUN chown -R grafana:grafana /etc/grafana/provisioning/
+
+USER grafana
 
 RUN mkdir -p /var/lib/grafana/dashboards
 COPY grafana-dashboards/*.json /var/lib/grafana/dashboards/

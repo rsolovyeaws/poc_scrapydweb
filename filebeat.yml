@@ -18,18 +18,15 @@ processors:
 output.elasticsearch:
   hosts: ["elasticsearch:9200"]
   indices:
-    - index: "scraper-logs-%{+yyyy.MM.dd}"
-      when.contains:
-        container.image.name: "scrapyd"
-    - index: "selenium-logs-%{+yyyy.MM.dd}"
-      when.contains:
-        container.image.name: "selenium"
-    - index: "gateway-logs-%{+yyyy.MM.dd}"
-      when.contains:
-        container.image.name: "api-gateway"
-    - index: "filebeat-%{+yyyy.MM.dd}"
+    - index: "filebeat-%{[agent.version]}-%{+yyyy.MM.dd}"
 
 setup.kibana:
   host: "kibana:5601"
 
-setup.ilm.enabled: false 
+setup.ilm:
+  enabled: auto
+  rollover_alias: "filebeat"
+  pattern: "{now/d}-000001"
+  
+logging.json: true
+logging.metrics.enabled: false 
