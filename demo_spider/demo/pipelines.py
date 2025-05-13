@@ -91,6 +91,20 @@ class S3StoragePipeline:
         enriched_item['spider_name'] = spider.name
         enriched_item['source_url'] = spider.current_url if hasattr(spider, 'current_url') else spider.start_urls[0]
         
+        # Add User-Agent information if not already in the item
+        if 'user_agent' not in enriched_item or not enriched_item['user_agent']:
+            current_url = spider.current_url if hasattr(spider, 'current_url') else None
+            if current_url and hasattr(spider, 'user_agents_used') and current_url in spider.user_agents_used:
+                enriched_item['user_agent'] = spider.user_agents_used[current_url]
+        
+        # Add proxy information if not already in the item
+        if 'proxy' not in enriched_item or not enriched_item['proxy']:
+            current_url = spider.current_url if hasattr(spider, 'current_url') else None
+            if current_url and hasattr(spider, 'proxies_used') and current_url in spider.proxies_used:
+                enriched_item['proxy'] = spider.proxies_used[current_url]
+            elif hasattr(spider, 'proxy') and spider.proxy:
+                enriched_item['proxy'] = spider.proxy
+        
         # Create JSON from item
         json_item = json.dumps(enriched_item, ensure_ascii=False)
         
@@ -132,6 +146,7 @@ class S3StoragePipeline:
         
         # Return item for further processing
         return item
+
 class PostgresPipeline:
     def __init__(self, db_settings):
         self.db_settings = db_settings
@@ -160,6 +175,8 @@ class PostgresPipeline:
             id SERIAL PRIMARY KEY,
             url TEXT,
             spider_name TEXT,
+            user_agent TEXT,
+            proxy TEXT,
             data JSONB,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
@@ -177,17 +194,35 @@ class PostgresPipeline:
         enriched_item = dict(item)
         enriched_item['crawl_time'] = datetime.now().isoformat()
         enriched_item['spider_name'] = spider.name
+        
+        # Get URL for the current item
+        current_url = spider.current_url if hasattr(spider, 'current_url') else spider.start_urls[0]
+        
+        # Get User-Agent for this URL
+        user_agent = enriched_item.get('user_agent', None)
+        if not user_agent and hasattr(spider, 'user_agents_used') and current_url in spider.user_agents_used:
+            user_agent = spider.user_agents_used[current_url]
+        
+        # Get proxy for this URL
+        proxy = enriched_item.get('proxy', None)
+        if not proxy:
+            if hasattr(spider, 'proxies_used') and current_url in spider.proxies_used:
+                proxy = spider.proxies_used[current_url]
+            elif hasattr(spider, 'proxy') and spider.proxy:
+                proxy = spider.proxy
 
         # Insert data into the database
         self.cursor.execute(
             f"""
             INSERT INTO {spider.name}_data 
-            (url, spider_name, data) 
-            VALUES (%s, %s, %s)
+            (url, spider_name, user_agent, proxy, data) 
+            VALUES (%s, %s, %s, %s, %s)
             """,
             (
-                spider.current_url if hasattr(spider, 'current_url') else spider.start_urls[0],
+                current_url,
                 spider.name,
+                user_agent,
+                proxy,
                 json.dumps(enriched_item)
             )
         )

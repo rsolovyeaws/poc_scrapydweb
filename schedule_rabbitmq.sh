@@ -13,7 +13,8 @@ python publish_rabbitmq_task.py \
   --proxy http://tinyproxy:8888 \
   --setting "CLOSESPIDER_PAGECOUNT=0" \
   --setting "CLOSESPIDER_TIMEOUT=60" \
-  --setting "LOG_LEVEL=DEBUG"
+  --setting "LOG_LEVEL=DEBUG" \
+  --user-agent-type desktop
 
 # Optional: Add additional parameters to override defaults
 # --project demo-1.0-py3.10 \
@@ -21,3 +22,4 @@ python publish_rabbitmq_task.py \
 # --spider quotes_spa \
 # --jobid custom_id \
 # --arg "arg1=val1" 
+# --user-agent-type mobile 
