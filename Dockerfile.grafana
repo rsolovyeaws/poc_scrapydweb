@@ -6,14 +6,13 @@ USER root
 COPY ./grafana/dashboards /etc/grafana/provisioning/dashboards
 COPY ./grafana/datasources /etc/grafana/provisioning/datasources
 
-# Set permissions
-RUN chown -R grafana:grafana /etc/grafana/provisioning/
+# Use numeric ID directly to avoid user/group name issues
+RUN chown -R 472:472 /etc/grafana/provisioning/
 
 USER grafana
 
 RUN mkdir -p /var/lib/grafana/dashboards
 COPY grafana-dashboards/*.json /var/lib/grafana/dashboards/
 
-# Нет необходимости явно менять владельца, т.к. базовый образ 
-# уже настроен на правильные разрешения
-# grafana/grafana уже запускается от имени пользователя grafana 
+# Note: We're using UID/GID 472 which is the standard for Grafana
+# The grafana/grafana image is already configured to run as this user 

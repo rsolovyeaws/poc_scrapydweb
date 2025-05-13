@@ -408,6 +408,26 @@ services:
       - scraper-network
     restart: "no"
 
+  # Add the ua-rotator service to the docker-compose.yml file
+  # This should be added as a service alongside the existing services
+  ua-rotator:
+    build:
+      context: ./ua-rotator
+      dockerfile: Dockerfile
+    container_name: ua-rotator
+    ports:
+      - "5002:5000"
+    volumes:
+      - ua-rotator-data:/data
+    environment:
+      - PORT=5000
+      - HOST=0.0.0.0
+      - DATA_DIR=/data
+      - DEBUG=false
+    restart: unless-stopped
+    networks:
+      - scraper-network
+
 networks:
   scraper-network:
     driver: bridge
@@ -432,4 +452,7 @@ volumes:
   grafana_data:
     driver: local
   rabbitmq_data:
+    driver: local
+  # Add the volume for ua-rotator data persistence
+  ua-rotator-data:
     driver: local

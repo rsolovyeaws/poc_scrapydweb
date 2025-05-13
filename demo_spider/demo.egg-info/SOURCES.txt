@@ -1,3 +1,4 @@
+README.md
 setup.py
 demo/__init__.py
 demo/cookie_api_example.py
@@ -7,6 +8,7 @@ demo/middlewares.py
 demo/pipelines.py
 demo/redis_cookies_middleware.py
 demo/settings.py
+demo/user_agent_middleware.py
 demo.egg-info/PKG-INFO
 demo.egg-info/SOURCES.txt
 demo.egg-info/dependency_links.txt

@@ -9,6 +9,8 @@ PROJECT="demo-1.0-py3.10"
 SPIDER="quotes_spa"
 VERSION="1_0"
 JOB_COUNT=2  # Количество задач для запуска (по умолчанию 2)
+USER_AGENT_TYPE="desktop"  # Тип User-Agent (по умолчанию desktop)
+DEFAULT_PROXY="http://tinyproxy:8888"  # Default proxy to use
 
 # Проверить, установлена ли утилита jq
 if ! command -v jq &> /dev/null; then
@@ -40,6 +42,12 @@ while [ $# -gt 0 ]; do
         --version=*)
             VERSION=${1#*=}
             ;;
+        --user-agent-type=*)
+            USER_AGENT_TYPE=${1#*=}
+            ;;
+        --proxy=*)
+            DEFAULT_PROXY=${1#*=}
+            ;;
         --help|-h)
             echo "Использование: $0 [параметры]"
             echo "Параметры:"
@@ -48,6 +56,8 @@ while [ $# -gt 0 ]; do
             echo "  --project=NAME  Имя проекта (по умолчанию: $PROJECT)"
             echo "  --spider=NAME   Имя паука (по умолчанию: $SPIDER)"
             echo "  --version=VER   Версия проекта (по умолчанию: $VERSION)"
+            echo "  --user-agent-type=TYPE Тип User-Agent (desktop, mobile, tablet) (по умолчанию: $USER_AGENT_TYPE)"
+            echo "  --proxy=URL     Прокси-сервер (по умолчанию: $DEFAULT_PROXY)"
             echo "  --help, -h      Показать эту справку"
             exit 0
             ;;
@@ -62,6 +72,8 @@ done
 echo "=== ТЕСТ БАЛАНСИРОВКИ НАГРУЗКИ ==="
 echo "API Gateway: $API_URL"
 echo "Запуск $JOB_COUNT задач для проекта $PROJECT, паук $SPIDER"
+echo "Тип User-Agent: $USER_AGENT_TYPE"
+echo "Прокси-сервер: $DEFAULT_PROXY"
 echo ""
 
 # Проверяем доступность API Gateway
@@ -105,9 +117,11 @@ for i in $(seq 1 $JOB_COUNT); do
             "CLOSESPIDER_TIMEOUT": "120",
             "LOG_LEVEL": "INFO"
           },
+          "user_agent_type": "'"$USER_AGENT_TYPE"'",
           "auth_enabled": "false",
           "username": "admin",
-          "password": "admin"
+          "password": "admin",
+          "proxy": "'"$DEFAULT_PROXY"'"
         }')
     
     status=$(echo $response | jq -r '.status')
@@ -132,6 +146,8 @@ check_status() {
     echo "API Gateway: $API_URL"
     echo "Проект: $PROJECT, Паук: $SPIDER"
     echo "Запущено задач: $JOB_COUNT"
+    echo "Тип User-Agent: $USER_AGENT_TYPE"
+    echo "Прокси-сервер: $DEFAULT_PROXY"
     echo ""
     
     echo "=== СТАТУС SCRAPYD-ИНСТАНСОВ ==="
@@ -191,6 +207,8 @@ API_URL="$API_URL"
 PROJECT="$PROJECT"
 JOB_COUNT="$JOB_COUNT"
 SPIDER="$SPIDER"
+USER_AGENT_TYPE="$USER_AGENT_TYPE"
+DEFAULT_PROXY="$DEFAULT_PROXY"
 
 # Функция для проверки статуса задач
 check_status() {
@@ -198,6 +216,8 @@ check_status() {
     echo "API Gateway: \$API_URL"
     echo "Проект: \$PROJECT, Паук: \$SPIDER"
     echo "Запущено задач: \$JOB_COUNT"
+    echo "Тип User-Agent: \$USER_AGENT_TYPE"
+    echo "Прокси-сервер: \$DEFAULT_PROXY"
     echo ""
     
     echo "=== СТАТУС SCRAPYD-ИНСТАНСОВ ==="

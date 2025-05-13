@@ -29,10 +29,17 @@ SELENIUM_DRIVER_CAPABILITIES = {
     "browserName": "chrome",
     "platformName": "linux",
 }
+# --- User-Agent Rotation Settings ---
+USER_AGENT_ROTATION_ENABLED = True
+USER_AGENT_SERVICE_URL = 'http://ua-rotator:5000'
 # Use our custom middleware
 DOWNLOADER_MIDDLEWARES = {
+    # Disable default user-agent middleware
+    "scrapy.downloadermiddlewares.useragent.UserAgentMiddleware": None,
+    # Our middlewares
+    "demo.user_agent_middleware.UserAgentRotationMiddleware": 750,
     "demo.custom_selenium_middleware.SeleniumMiddleware": 800,
-    "scrapy.downloadermiddlewares.httpproxy.HttpProxyMiddleware": 750
+    "scrapy.downloadermiddlewares.httpproxy.HttpProxyMiddleware": 850
 }
 # Item pipelines
 ITEM_PIPELINES = {
@@ -46,4 +53,4 @@ ROBOTSTXT_OBEY = False
 LOG_LEVEL = "INFO"
 
 # Default proxy settings - can be overridden by spider parameters
-# PROXY = None  # e.g. "http://tinyproxy:8888"
+PROXY = "http://tinyproxy:8888"  # default proxy for all spiders
