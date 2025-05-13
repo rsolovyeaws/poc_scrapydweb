@@ -48,6 +48,9 @@ while [ $# -gt 0 ]; do
         --proxy=*)
             DEFAULT_PROXY=${1#*=}
             ;;
+        --delay=*)
+            DELAY_BETWEEN_JOBS=${1#*=}
+            ;;
         --help|-h)
             echo "Использование: $0 [параметры]"
             echo "Параметры:"
@@ -58,6 +61,7 @@ while [ $# -gt 0 ]; do
             echo "  --version=VER   Версия проекта (по умолчанию: $VERSION)"
             echo "  --user-agent-type=TYPE Тип User-Agent (desktop, mobile, tablet) (по умолчанию: $USER_AGENT_TYPE)"
             echo "  --proxy=URL     Прокси-сервер (по умолчанию: $DEFAULT_PROXY)"
+            echo "  --delay=N       Задержка между запусками задач в секундах (по умолчанию: $DELAY_BETWEEN_JOBS)"
             echo "  --help, -h      Показать эту справку"
             exit 0
             ;;
@@ -74,6 +78,7 @@ echo "API Gateway: $API_URL"
 echo "Запуск $JOB_COUNT задач для проекта $PROJECT, паук $SPIDER"
 echo "Тип User-Agent: $USER_AGENT_TYPE"
 echo "Прокси-сервер: $DEFAULT_PROXY"
+echo "Задержка между запусками: $DELAY_BETWEEN_JOBS сек."
 echo ""
 
 # Проверяем доступность API Gateway
@@ -134,6 +139,12 @@ for i in $(seq 1 $JOB_COUNT); do
         msg=$(echo $response | jq -r '.message')
         echo "❌ Ошибка запуска задачи $i: $msg"
     fi
+    
+    # Add delay between job launches to prevent resource contention
+    if [ $i -lt $JOB_COUNT ]; then
+        echo "⏱️ Ожидание $DELAY_BETWEEN_JOBS секунд перед запуском следующей задачи..."
+        sleep $DELAY_BETWEEN_JOBS
+    fi
 done
 
 echo ""
@@ -148,6 +159,7 @@ check_status() {
     echo "Запущено задач: $JOB_COUNT"
     echo "Тип User-Agent: $USER_AGENT_TYPE"
     echo "Прокси-сервер: $DEFAULT_PROXY"
+    echo "Задержка между запусками: $DELAY_BETWEEN_JOBS сек."
     echo ""
     
     echo "=== СТАТУС SCRAPYD-ИНСТАНСОВ ==="
@@ -209,6 +221,7 @@ JOB_COUNT="$JOB_COUNT"
 SPIDER="$SPIDER"
 USER_AGENT_TYPE="$USER_AGENT_TYPE"
 DEFAULT_PROXY="$DEFAULT_PROXY"
+DELAY_BETWEEN_JOBS="$DELAY_BETWEEN_JOBS"
 
 # Функция для проверки статуса задач
 check_status() {
@@ -218,6 +231,7 @@ check_status() {
     echo "Запущено задач: \$JOB_COUNT"
     echo "Тип User-Agent: \$USER_AGENT_TYPE"
     echo "Прокси-сервер: \$DEFAULT_PROXY"
+    echo "Задержка между запусками: \$DELAY_BETWEEN_JOBS сек."
     echo ""
     
     echo "=== СТАТУС SCRAPYD-ИНСТАНСОВ ==="
