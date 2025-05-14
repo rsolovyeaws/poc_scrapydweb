@@ -29,6 +29,13 @@ SELENIUM_DRIVER_CAPABILITIES = {
     "browserName": "chrome",
     "platformName": "linux",
 }
+# Set lower concurrency to avoid overwhelming Selenium
+CONCURRENT_REQUESTS = 2
+CONCURRENT_REQUESTS_PER_DOMAIN = 2
+DOWNLOAD_DELAY = 1  # 1 second delay between requests
+# Add timeout settings for Selenium
+SELENIUM_PAGE_LOAD_TIMEOUT = 30
+SELENIUM_SCRIPT_TIMEOUT = 30
 # --- User-Agent Rotation Settings ---
 USER_AGENT_ROTATION_ENABLED = True
 USER_AGENT_SERVICE_URL = 'http://ua-rotator:5000'

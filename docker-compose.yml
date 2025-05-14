@@ -58,9 +58,19 @@ services:
       - SE_NODE_MAX_SESSIONS=4
       - SE_NODE_SESSION_TIMEOUT=300
       - SE_NODE_OVERRIDE_MAX_SESSIONS=true
+      - SE_OPTS=--session-request-timeout 300
+      - SE_GRID_MAX_HEAP=1024m
     volumes:
       - ./data/cookies:/data/cookies # Volume for persistent cookies
     shm_size: 4gb
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4g
+        reservations:
+          cpus: '1'
+          memory: 2g
 
   # Database container to store scraping results
   postgres:
@@ -120,10 +130,13 @@ services:
       - scrapyd1
       - scrapyd2
       - redis
+      - selenium-hub
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_DB=0
+      - MAX_SELENIUM_SESSIONS=4
+      - SELENIUM_HUB_URL=http://selenium-hub:4444
     networks:
       - scraper-network
     healthcheck:

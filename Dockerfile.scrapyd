@@ -19,7 +19,8 @@ RUN pip install --no-cache-dir --break-system-packages \
     psycopg2-binary \
     boto3 \
     botocore \
-    redis==5.0.1
+    redis==5.0.1 \
+    requests==2.31.0
 
 # Install scrapydweb with logparser
 RUN pip install --break-system-packages scrapydweb[logparser]

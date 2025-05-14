@@ -11,6 +11,7 @@ VERSION="1_0"
 JOB_COUNT=2  # Количество задач для запуска (по умолчанию 2)
 USER_AGENT_TYPE="desktop"  # Тип User-Agent (по умолчанию desktop)
 DEFAULT_PROXY="http://tinyproxy:8888"  # Default proxy to use
+DEBUG_MODE=false  # Режим отладки (сохраняет ответы API в файлы)
 
 # Проверить, установлена ли утилита jq
 if ! command -v jq &> /dev/null; then
@@ -48,8 +49,8 @@ while [ $# -gt 0 ]; do
         --proxy=*)
             DEFAULT_PROXY=${1#*=}
             ;;
-        --delay=*)
-            DELAY_BETWEEN_JOBS=${1#*=}
+        --debug)
+            DEBUG_MODE=true
             ;;
         --help|-h)
             echo "Использование: $0 [параметры]"
@@ -61,7 +62,7 @@ while [ $# -gt 0 ]; do
             echo "  --version=VER   Версия проекта (по умолчанию: $VERSION)"
             echo "  --user-agent-type=TYPE Тип User-Agent (desktop, mobile, tablet) (по умолчанию: $USER_AGENT_TYPE)"
             echo "  --proxy=URL     Прокси-сервер (по умолчанию: $DEFAULT_PROXY)"
-            echo "  --delay=N       Задержка между запусками задач в секундах (по умолчанию: $DELAY_BETWEEN_JOBS)"
+            echo "  --debug         Включить режим отладки (сохраняет ответы API в файлы)"
             echo "  --help, -h      Показать эту справку"
             exit 0
             ;;
@@ -78,7 +79,6 @@ echo "API Gateway: $API_URL"
 echo "Запуск $JOB_COUNT задач для проекта $PROJECT, паук $SPIDER"
 echo "Тип User-Agent: $USER_AGENT_TYPE"
 echo "Прокси-сервер: $DEFAULT_PROXY"
-echo "Задержка между запусками: $DELAY_BETWEEN_JOBS сек."
 echo ""
 
 # Проверяем доступность API Gateway
@@ -87,6 +87,16 @@ if [ $status_code -ne 200 ]; then
     echo "❌ API Gateway недоступен (статус: $status_code)"
     echo "Запустите Docker Compose: docker-compose up -d"
     exit 1
+fi
+
+# Reset Selenium counter to ensure we start fresh
+echo "Сбрасываем счетчик сессий Selenium..."
+reset_response=$(curl -s ${API_URL}/selenium/reset)
+reset_status=$(echo $reset_response | jq -r '.status')
+if [ "$reset_status" == "success" ]; then
+    echo "✅ Счетчик сессий Selenium сброшен"
+else
+    echo "⚠️ Не удалось сбросить счетчик Selenium, но продолжаем..."
 fi
 
 # Проверяем статус Scrapyd-инстансов
@@ -140,10 +150,9 @@ for i in $(seq 1 $JOB_COUNT); do
         echo "❌ Ошибка запуска задачи $i: $msg"
     fi
     
-    # Add delay between job launches to prevent resource contention
+    # No delays between job launches
     if [ $i -lt $JOB_COUNT ]; then
-        echo "⏱️ Ожидание $DELAY_BETWEEN_JOBS секунд перед запуском следующей задачи..."
-        sleep $DELAY_BETWEEN_JOBS
+        echo "⏱️ Запуск следующей задачи..."
     fi
 done
 
@@ -159,12 +168,14 @@ check_status() {
     echo "Запущено задач: $JOB_COUNT"
     echo "Тип User-Agent: $USER_AGENT_TYPE"
     echo "Прокси-сервер: $DEFAULT_PROXY"
-    echo "Задержка между запусками: $DELAY_BETWEEN_JOBS сек."
     echo ""
     
+    # Получаем полный статус API Gateway
+    status_response=$(curl -s ${API_URL}/status)
+    
     echo "=== СТАТУС SCRAPYD-ИНСТАНСОВ ==="
-    curl -s ${API_URL}/status | jq -r '
-        to_entries[] | 
+    echo "$status_response" | jq -r '
+        .scrapyd | to_entries[] | 
         if .value.status == "online" then
             "✓ \(.key): \(.value.running) задач выполняется, \(.value.pending) в очереди"
         else 
@@ -172,32 +183,119 @@ check_status() {
         end
     '
     
+    # Вывод информации о статусе Selenium
+    echo ""
+    echo "=== СТАТУС SELENIUM ==="
+    echo "$status_response" | jq -r '
+        .selenium | 
+        if .status == "online" then
+            "✓ Sessions: \(.active_sessions)/\(.max_sessions) active, \(.queued_jobs) в очереди"
+        else
+            "✗ \(.message // "offline")"
+        end
+    '
+    
     echo ""
     echo "=== СТАТУС ЗАДАЧ ==="
-    jobs_json=$(curl -s "${API_URL}/list-jobs/${PROJECT}")
     
-    for node in $(echo $jobs_json | jq -r 'keys[]'); do
+    # Добавим вывод текущей даты/времени для отслеживания активности
+    echo "Время запроса: $(date '+%Y-%m-%d %H:%M:%S')"
+    
+    # Получаем и сохраняем ответ API в переменную
+    jobs_response=$(curl -s "${API_URL}/list-jobs/${PROJECT}")
+    
+    # В режиме отладки сохраняем ответ в файл
+    if [ "$DEBUG_MODE" = true ]; then
+        debug_file="debug_jobs_$(date +%Y%m%d_%H%M%S).json"
+        echo "$jobs_response" > "$debug_file"
+        echo "📋 Ответ API сохранен в файл: $debug_file"
+    fi
+    
+    # Вывод размера ответа для диагностики
+    response_size=${#jobs_response}
+    echo "Размер ответа: $response_size байт"
+    
+    # Проверка на пустой ответ
+    if [ -z "$jobs_response" ]; then
+        echo "❌ Получен пустой ответ от API"
+        return
+    fi
+    
+    # Проверка на ошибки в JSON
+    if ! echo "$jobs_response" | jq empty 2>/dev/null; then
+        echo "❌ Получен невалидный JSON:"
+        echo "$jobs_response"
+        return
+    fi
+    
+    # Отладка: выводим структуру ответа
+    echo "Структура ответа:"
+    echo "$jobs_response" | jq 'keys'
+    
+    # Обрабатываем очередь Selenium, если она есть
+    if echo "$jobs_response" | jq -e 'has("queued")' > /dev/null 2>&1; then
+        queued_count=$(echo "$jobs_response" | jq '.queued | length')
+        if [ "$queued_count" -gt 0 ]; then
+            echo "Узел: API Gateway Queue"
+            echo "  В очереди Selenium: $queued_count"
+            echo "$jobs_response" | jq -r '.queued[] | "    - \(.id) (\(.spider)) - узел: \(.node)"'
+            echo ""
+        fi
+    fi
+    
+    # Получаем список всех узлов, исключая "queued"
+    nodes=$(echo "$jobs_response" | jq -r 'keys[] | select(. != "queued")')
+    
+    # Проверяем, есть ли узлы
+    if [ -z "$nodes" ]; then
+        echo "ℹ️ Нет активных Scrapyd-узлов или задач"
+        return
+    fi
+    
+    # Выводим список найденных узлов
+    echo "Найдено узлов: $(echo "$nodes" | wc -l)"
+    
+    # Обрабатываем информацию по каждому узлу
+    for node in $nodes; do
         echo "Узел: $node"
         
+        # Получаем данные узла для упрощения работы
+        node_data=$(echo "$jobs_response" | jq --arg node "$node" '.[$node]')
+        
+        # Отладка: показываем структуру данных узла
+        echo "  Доступные ключи для узла:"
+        echo "$node_data" | jq 'keys'
+        
+        # Проверка на пустые/null данные
+        if [ "$(echo "$node_data" | jq 'length')" -eq 0 ] || [ "$(echo "$node_data" | jq 'length')" = "null" ]; then
+            echo "  ℹ️ Нет данных"
+            continue
+        fi
+        
         # Проверяем задачи в очереди
-        pending=$(echo $jobs_json | jq -r --arg node "$node" '.[$node].pending // [] | length')
-        if [ $pending -gt 0 ]; then
-            echo "  В очереди: $pending"
-            echo $jobs_json | jq -r --arg node "$node" '.[$node].pending // [] | .[] | "    - \(.id) (\(.spider))"'
+        pending_count=$(echo "$node_data" | jq '.pending | length // 0')
+        if [ "$pending_count" != "null" ] && [ "$pending_count" -gt 0 ]; then
+            echo "  В очереди: $pending_count"
+            echo "$node_data" | jq -r '.pending[] | "    - \(.id) (\(.spider))"' 2>/dev/null || echo "    (ошибка отображения)"
         fi
         
         # Проверяем выполняющиеся задачи
-        running=$(echo $jobs_json | jq -r --arg node "$node" '.[$node].running // [] | length')
-        if [ $running -gt 0 ]; then
-            echo "  Выполняется: $running"
-            echo $jobs_json | jq -r --arg node "$node" '.[$node].running // [] | .[] | "    - \(.id) (\(.spider)) - запущена \(.start_time)"'
+        running_count=$(echo "$node_data" | jq '.running | length // 0')
+        if [ "$running_count" != "null" ] && [ "$running_count" -gt 0 ]; then
+            echo "  Выполняется: $running_count"
+            echo "$node_data" | jq -r '.running[] | "    - \(.id) (\(.spider)) - запущена \(.start_time)"' 2>/dev/null || echo "    (ошибка отображения)"
         fi
         
         # Проверяем завершенные задачи
-        finished=$(echo $jobs_json | jq -r --arg node "$node" '.[$node].finished // [] | length')
-        if [ $finished -gt 0 ]; then
-            echo "  Завершено: $finished (последние 3)"
-            echo $jobs_json | jq -r --arg node "$node" '.[$node].finished // [] | sort_by(.end_time) | reverse | .[0:3] | .[] | "    - \(.id) (\(.spider)) - завершена \(.end_time)"'
+        finished_count=$(echo "$node_data" | jq '.finished | length // 0')
+        if [ "$finished_count" != "null" ] && [ "$finished_count" -gt 0 ]; then
+            echo "  Завершено: $finished_count (последние 3)"
+            echo "$node_data" | jq -r '.finished | sort_by(.end_time) | reverse | .[0:3] | .[] | "    - \(.id) (\(.spider)) - завершена \(.end_time)"' 2>/dev/null || echo "    (ошибка отображения)"
+        fi
+        
+        # Если ни одной задачи не найдено, выводим информацию
+        if [ "$pending_count" = "0" ] && [ "$running_count" = "0" ] && [ "$finished_count" = "0" ]; then
+            echo "  ℹ️ Нет активных или завершенных задач"
         fi
         
         echo ""
@@ -221,7 +319,7 @@ JOB_COUNT="$JOB_COUNT"
 SPIDER="$SPIDER"
 USER_AGENT_TYPE="$USER_AGENT_TYPE"
 DEFAULT_PROXY="$DEFAULT_PROXY"
-DELAY_BETWEEN_JOBS="$DELAY_BETWEEN_JOBS"
+DEBUG_MODE="$DEBUG_MODE"
 
 # Функция для проверки статуса задач
 check_status() {
@@ -231,12 +329,14 @@ check_status() {
     echo "Запущено задач: \$JOB_COUNT"
     echo "Тип User-Agent: \$USER_AGENT_TYPE"
     echo "Прокси-сервер: \$DEFAULT_PROXY"
-    echo "Задержка между запусками: \$DELAY_BETWEEN_JOBS сек."
     echo ""
     
+    # Получаем полный статус API Gateway
+    status_response=\$(curl -s \${API_URL}/status)
+    
     echo "=== СТАТУС SCRAPYD-ИНСТАНСОВ ==="
-    curl -s \${API_URL}/status | jq -r '
-        to_entries[] | 
+    echo \$status_response | jq -r '
+        .scrapyd | to_entries[] | 
         if .value.status == "online" then
             "✓ \(.key): \(.value.running) задач выполняется, \(.value.pending) в очереди"
         else 
@@ -244,32 +344,102 @@ check_status() {
         end
     '
     
+    # Вывод информации о статусе Selenium
+    echo ""
+    echo "=== СТАТУС SELENIUM ==="
+    echo \$status_response | jq -r '
+        .selenium | 
+        if .status == "online" then
+            "✓ Sessions: \(.active_sessions)/\(.max_sessions) active, \(.queued_jobs) в очереди"
+        else
+            "✗ \(.message // "offline")"
+        end
+    '
+    
     echo ""
     echo "=== СТАТУС ЗАДАЧ ==="
-    jobs_json=\$(curl -s "\${API_URL}/list-jobs/\${PROJECT}")
+    jobs_response=\$(curl -s "\${API_URL}/list-jobs/\${PROJECT}")
     
-    for node in \$(echo \$jobs_json | jq -r 'keys[]'); do
+    # В режиме отладки сохраняем ответ в файл
+    if [ "\$DEBUG_MODE" = true ]; then
+        debug_file="debug_jobs_\$(date +%Y%m%d_%H%M%S).json"
+        echo "\$jobs_response" > "\$debug_file"
+        echo "📋 Ответ API сохранен в файл: \$debug_file"
+    fi
+    
+    # Проверка на пустой ответ
+    if [ -z "\$jobs_response" ]; then
+        echo "❌ Получен пустой ответ от API"
+        return
+    fi
+    
+    # Проверка на ошибки в JSON
+    if ! echo "\$jobs_response" | jq empty 2>/dev/null; then
+        echo "❌ Получен невалидный JSON:"
+        echo "\$jobs_response"
+        return
+    fi
+    
+    # Обрабатываем очередь Selenium, если она есть
+    if echo "\$jobs_response" | jq -e 'has("queued")' > /dev/null 2>&1; then
+        queued_count=\$(echo "\$jobs_response" | jq '.queued | length')
+        if [ \$queued_count -gt 0 ]; then
+            echo "Узел: API Gateway Queue"
+            echo "  В очереди Selenium: \$queued_count"
+            echo "\$jobs_response" | jq -r '.queued[] | "    - \(.id) (\(.spider)) - узел: \(.node)"'
+            echo ""
+        fi
+    fi
+    
+    # Получаем список всех узлов, исключая "queued"
+    nodes=\$(echo "\$jobs_response" | jq -r 'keys[] | select(. != "queued")')
+    
+    # Проверяем, есть ли узлы
+    if [ -z "\$nodes" ]; then
+        echo "ℹ️ Нет активных Scrapyd-узлов или задач"
+        return
+    fi
+    
+    # Выводим список найденных узлов
+    echo "Найдено узлов: \$(echo \$nodes | wc -l)"
+    
+    # Обрабатываем информацию по каждому узлу
+    for node in \$nodes; do
         echo "Узел: \$node"
         
+        # Получаем данные узла для упрощения работы
+        node_data=\$(echo "\$jobs_response" | jq --arg node "\$node" '.[\$node]')
+        
+        # Проверка на пустые/null данные
+        if [ "\$(echo "\$node_data" | jq 'length')" -eq 0 ] || [ "\$(echo "\$node_data" | jq 'length')" = "null" ]; then
+            echo "  ℹ️ Нет данных"
+            continue
+        fi
+        
         # Проверяем задачи в очереди
-        pending=\$(echo \$jobs_json | jq -r --arg node "\$node" '.[\$node].pending // [] | length')
-        if [ \$pending -gt 0 ]; then
-            echo "  В очереди: \$pending"
-            echo \$jobs_json | jq -r --arg node "\$node" '.[\$node].pending // [] | .[] | "    - \(.id) (\(.spider))"'
+        pending_count=\$(echo "\$node_data" | jq '.pending | length // 0')
+        if [ \$pending_count != "null" ] && [ \$pending_count -gt 0 ]; then
+            echo "  В очереди: \$pending_count"
+            echo "\$node_data" | jq -r '.pending[] | "    - \(.id) (\(.spider))"' 2>/dev/null || echo "    (ошибка отображения)"
         fi
         
         # Проверяем выполняющиеся задачи
-        running=\$(echo \$jobs_json | jq -r --arg node "\$node" '.[\$node].running // [] | length')
-        if [ \$running -gt 0 ]; then
-            echo "  Выполняется: \$running"
-            echo \$jobs_json | jq -r --arg node "\$node" '.[\$node].running // [] | .[] | "    - \(.id) (\(.spider)) - запущена \(.start_time)"'
+        running_count=\$(echo "\$node_data" | jq '.running | length // 0')
+        if [ \$running_count != "null" ] && [ \$running_count -gt 0 ]; then
+            echo "  Выполняется: \$running_count"
+            echo "\$node_data" | jq -r '.running[] | "    - \(.id) (\(.spider)) - запущена \(.start_time)"' 2>/dev/null || echo "    (ошибка отображения)"
         fi
         
         # Проверяем завершенные задачи
-        finished=\$(echo \$jobs_json | jq -r --arg node "\$node" '.[\$node].finished // [] | length')
-        if [ \$finished -gt 0 ]; then
-            echo "  Завершено: \$finished (последние 3)"
-            echo \$jobs_json | jq -r --arg node "\$node" '.[\$node].finished // [] | sort_by(.end_time) | reverse | .[0:3] | .[] | "    - \(.id) (\(.spider)) - завершена \(.end_time)"'
+        finished_count=\$(echo "\$node_data" | jq '.finished | length // 0')
+        if [ \$finished_count != "null" ] && [ \$finished_count -gt 0 ]; then
+            echo "  Завершено: \$finished_count (последние 3)"
+            echo "\$node_data" | jq -r '.finished | sort_by(.end_time) | reverse | .[0:3] | .[] | "    - \(.id) (\(.spider)) - завершена \(.end_time)"' 2>/dev/null || echo "    (ошибка отображения)"
+        fi
+        
+        # Если ни одной задачи не найдено, выводим информацию
+        if [ \$pending_count = "0" ] && [ \$running_count = "0" ] && [ \$finished_count = "0" ]; then
+            echo "  ℹ️ Нет активных или завершенных задач"
         fi
         
         echo ""

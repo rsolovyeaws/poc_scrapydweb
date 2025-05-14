@@ -17,7 +17,8 @@ class QuotesSpaSpider(scrapy.Spider):
             "--headless", "--disable-gpu",
             "--no-sandbox", "--disable-dev-shm-usage",
         ],
-        "SELENIUM_DRIVER_POOL_SIZE": 3,
+        # Reduced pool size to avoid overwhelming the hub
+        "SELENIUM_DRIVER_POOL_SIZE": 1,
         # middlewares
         "DOWNLOADER_MIDDLEWARES": {
             # Disable default user-agent middleware
@@ -287,3 +288,36 @@ class QuotesSpaSpider(scrapy.Spider):
                 meta=meta,
                 errback=self.handle_error
             )
+
+    def closed(self, reason):
+        """Cleanup when spider is closed"""
+        self.logger.info(f"Spider closing: {reason}")
+        
+        # Ensure driver is properly closed
+        if hasattr(self, 'selenium_driver') and self.selenium_driver:
+            try:
+                self.logger.info(f"Closing Selenium driver in spider closed callback")
+                self.selenium_driver.quit()
+            except Exception as e:
+                self.logger.error(f"Error closing Selenium driver: {e}")
+        
+        # Fetch the Redis client if available
+        try:
+            if hasattr(self, 'crawler') and hasattr(self.crawler, 'engine'):
+                for middleware in self.crawler.engine.downloader.middleware.middlewares:
+                    # If this is a SeleniumMiddleware, clear its session counter
+                    if hasattr(middleware, 'pool') and middleware.pool:
+                        self.logger.info("Spider shutting down, clearing active Selenium sessions")
+                        try:
+                            # Try to access Redis through the SeleniumMiddleware
+                            endpoint = "/selenium/reset"
+                            import requests
+                            response = requests.get(f"http://api-gateway:5000{endpoint}")
+                            self.logger.info(f"Called API gateway to reset sessions: {response.status_code}")
+                        except Exception as e:
+                            self.logger.error(f"Error calling API gateway: {e}")
+                        break
+        except Exception as e:
+            self.logger.error(f"Error in Spider.closed cleanup: {e}")
+            
+        self.logger.info("Spider closed successfully")
