@@ -474,6 +474,40 @@ pip install pika
 - Авторизация: включена (admin/admin)
 - Прокси: http://tinyproxy:8888
 
+### Запуск нескольких пауков через RabbitMQ с балансировкой нагрузки
+
+С обновленной утилитой `publish_rabbitmq_task.py` вы можете запускать несколько пауков одновременно и задавать тип User-Agent:
+
+```bash
+# Активация виртуального окружения
+source .venv/bin/activate
+
+# Запуск 3 пауков с десктопным User-Agent
+python publish_rabbitmq_task.py \
+  --count=3 \
+  --user-agent-type=desktop \
+  --host localhost \
+  --port 5672 \
+  --project demo-1.0-py3.10 \
+  --spider quotes_spa \
+  --setting "CLOSESPIDER_TIMEOUT=120" \
+  --setting "LOG_LEVEL=INFO"
+```
+
+Параметры:
+- `--count` - количество пауков для запуска (по умолчанию 1)
+- `--user-agent-type` - тип User-Agent (desktop, mobile, tablet) (по умолчанию desktop)
+
+Задания будут автоматически сбалансированы между доступными Scrapyd-инстансами:
+1. Сервис task-processor получает задания из RabbitMQ
+2. API Gateway распределяет задания между scrapyd1 и scrapyd2, выбирая наименее загруженный инстанс
+3. Пауки на разных инстансах выполняются параллельно, а в рамках одного инстанса - последовательно
+
+Для мониторинга выполнения заданий используйте скрипт:
+```bash
+./test_balancer.sh
+```
+
 Для использования с другими параметрами вы можете отредактировать скрипт или использовать утилиту `publish_rabbitmq_task.py` напрямую:
 
 ```bash

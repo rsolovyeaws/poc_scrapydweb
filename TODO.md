@@ -153,23 +153,20 @@ task-processor:
     - scraper-network
 ```
 
-### 5. Ротация User-Agent
+### 5. Ротация User-Agent (ВЫПОЛНЕНО)
 
-#### План реализации:
-1. Создать API для получения случайного User-Agent из предопределенного списка
-2. Модифицировать SeleniumMiddleware для поддержки динамических User-Agent
+#### Реализовано:
+1. Добавлена поддержка выбора типа User-Agent (desktop, mobile, tablet) через параметр `--user-agent-type`
+2. Интегрировано в publish_rabbitmq_task.py для отправки задач с указанным типом User-Agent
+3. Реализована передача типа User-Agent в API Gateway и далее в Scrapyd
+4. Добавлена поддержка ротации User-Agent в SeleniumMiddleware
 
 ```yaml
-# Можно реализовать в рамках api-gateway или добавить отдельный сервис
-ua-rotator:
-  build:
-    context: ./ua-rotator
-    dockerfile: Dockerfile
-  container_name: ua-rotator
-  ports:
-    - "5002:5000"
-  networks:
-    - scraper-network
+# Реализовано в рамках api-gateway
+user_agent_type:
+  type: string
+  description: "Тип User-Agent (desktop, mobile, tablet)"
+  default: "desktop"
 ```
 
 ### 6. Улучшение надежности и отказоустойчивости
