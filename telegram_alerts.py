@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """
-Simple script to send alerts to Telegram.
-This can be used as a webhook target or manually called.
+Simple HTTP server that receives alerts from Alertmanager and sends them to Telegram.
 """
 
 import os
-import sys
 import json
 import logging
 import time
@@ -13,6 +11,7 @@ from pathlib import Path
 import requests
 from datetime import datetime
 from dotenv import load_dotenv
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # Load environment variables from .env file
 load_dotenv()
@@ -23,6 +22,7 @@ CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
 LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
 SPAM_PROTECTION_SECONDS = int(os.environ.get('SPAM_PROTECTION_SECONDS', '60'))
 LAST_MESSAGE_FILE = Path('/tmp/last_telegram_message.txt')
+HTTP_PORT = int(os.environ.get('HTTP_PORT', '8080'))
 
 # Setup logging
 logging.basicConfig(
@@ -138,53 +138,82 @@ def format_alert(alert_data):
     
     return message
 
-def main():
-    """Main function to handle alerts"""
-    # Check if data is passed as an argument
-    if len(sys.argv) > 1:
-        message = sys.argv[1]
-        formatted_alert = format_alert(message)
-        if formatted_alert:
-            send_telegram_message(formatted_alert)
-        else:
-            logger.info("Alert was filtered and not sent")
-        return
+class AlertHandler(BaseHTTPRequestHandler):
+    def _set_response(self, status_code=200, content_type='application/json'):
+        self.send_response(status_code)
+        self.send_header('Content-type', content_type)
+        self.end_headers()
     
-    # Check if data is piped in
-    if not sys.stdin.isatty():
+    def do_GET(self):
+        if self.path == '/health':
+            self._set_response(200, 'text/plain')
+            self.wfile.write("OK".encode())
+            return
+        
+        self._set_response(200)
+        response = {'status': 'ok', 'message': 'Telegram Alert Service is running'}
+        self.wfile.write(json.dumps(response).encode())
+    
+    def do_POST(self):
+        content_length = int(self.headers['Content-Length'])
+        post_data = self.rfile.read(content_length)
+        
+        logger.info(f"Received POST request to {self.path}")
+        
         try:
-            data = sys.stdin.read().strip()
             # Try to parse as JSON
-            try:
-                alert_data = json.loads(data)
-                # Handle Prometheus Alertmanager format
-                if 'alerts' in alert_data:
-                    alerts_sent = 0
-                    for alert in alert_data['alerts']:
-                        formatted_alert = format_alert(alert)
-                        if formatted_alert:
-                            send_telegram_message(formatted_alert)
-                            alerts_sent += 1
-                    logger.info(f"Processed {len(alert_data['alerts'])} alerts, sent {alerts_sent}")
-                else:
-                    formatted_alert = format_alert(alert_data)
+            alert_data = json.loads(post_data)
+            
+            # Process alerts
+            alerts_sent = 0
+            
+            # Check if it's Alertmanager format
+            if 'alerts' in alert_data:
+                for alert in alert_data['alerts']:
+                    formatted_alert = format_alert(alert)
                     if formatted_alert:
                         send_telegram_message(formatted_alert)
-                    else:
-                        logger.info("Alert was filtered and not sent")
-            except json.JSONDecodeError:
-                # Not JSON, just send as text
-                formatted_alert = format_alert(data)
+                        alerts_sent += 1
+                logger.info(f"Processed {len(alert_data['alerts'])} alerts, sent {alerts_sent}")
+            else:
+                # Single alert
+                formatted_alert = format_alert(alert_data)
                 if formatted_alert:
                     send_telegram_message(formatted_alert)
-                else:
-                    logger.info("Alert was filtered and not sent")
+                    alerts_sent = 1
+            
+            self._set_response(200)
+            response = {'status': 'ok', 'alerts_processed': alerts_sent}
+            
+        except json.JSONDecodeError:
+            # Not JSON, try to process as text
+            text_data = post_data.decode('utf-8')
+            formatted_alert = format_alert(text_data)
+            if formatted_alert:
+                send_telegram_message(formatted_alert)
+                self._set_response(200)
+                response = {'status': 'ok', 'message': 'Text alert processed'}
+            else:
+                self._set_response(400)
+                response = {'status': 'error', 'message': 'Could not process alert data'}
         except Exception as e:
-            logger.error(f"Error processing input: {e}")
-            sys.exit(1)
-    else:
-        logger.error("No alert data provided. Pass as argument or pipe to script.")
-        sys.exit(1)
+            logger.error(f"Error processing request: {e}")
+            self._set_response(500)
+            response = {'status': 'error', 'message': str(e)}
+        
+        self.wfile.write(json.dumps(response).encode())
+
+def run_server(port=HTTP_PORT):
+    server_address = ('', port)
+    httpd = HTTPServer(server_address, AlertHandler)
+    logger.info(f'Starting Telegram Alert HTTP server on port {port}...')
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        logger.info('Server stopped by user')
+    except Exception as e:
+        logger.error(f'Server error: {e}')
+        raise
 
 if __name__ == '__main__':
-    main() 
+    run_server() 

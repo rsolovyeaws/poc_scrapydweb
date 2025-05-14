@@ -100,7 +100,8 @@ services:
     ports:
       - "8800:80"
     volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./custom_nginx_config/nginx.conf:/etc/nginx/nginx.conf
+      - ./custom_nginx_config/default.conf:/etc/nginx/conf.d/default.conf
     depends_on:
       - scrapyd1
       - scrapyd2
@@ -274,7 +275,7 @@ services:
     container_name: filebeat
     user: root
     volumes:
-      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
@@ -282,6 +283,10 @@ services:
     depends_on:
       - elasticsearch
     restart: unless-stopped
+    command: >
+      bash -c "chown root:root /usr/share/filebeat/filebeat.yml &&
+              chmod go-w /usr/share/filebeat/filebeat.yml &&
+              filebeat -e"
 
   # Prometheus for metrics collection
   prometheus:
@@ -362,12 +367,18 @@ services:
     ports:
       - "9093:9093"
     volumes:
-      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml.template
     command:
       - '--config.file=/etc/alertmanager/alertmanager.yml'
       - '--storage.path=/alertmanager'
     env_file:
       - .env
+    entrypoint:
+      - sh
+      - -c
+      - |
+        cat /etc/alertmanager/alertmanager.yml.template | sed "s/\$${TELEGRAM_CHAT_ID}/${TELEGRAM_CHAT_ID}/g" > /etc/alertmanager/alertmanager.yml && 
+        /bin/alertmanager --config.file=/etc/alertmanager/alertmanager.yml --storage.path=/alertmanager
     networks:
       - scraper-network
     restart: unless-stopped
@@ -378,10 +389,23 @@ services:
       context: .
       dockerfile: Dockerfile.telegram_alerts
     container_name: telegram-alerts
+    ports:
+      - "8088:8080"
     env_file:
       - .env
+    environment:
+      - LOG_LEVEL=INFO
+      - SPAM_PROTECTION_SECONDS=60
+      - HTTP_PORT=8080
+    volumes:
+      - /tmp:/tmp
     networks:
       - scraper-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     restart: unless-stopped
 
   # Стартовое уведомление (запускается один раз и завершается)

@@ -2,6 +2,9 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
+# Install curl for healthchecks
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 COPY telegram_alerts.py /app/
 COPY send_notification.py /app/
 COPY requirements.telegram.txt /app/requirements.txt
@@ -10,5 +13,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 RUN chmod +x /app/telegram_alerts.py
 RUN chmod +x /app/send_notification.py
+
+# Expose the HTTP port
+EXPOSE 8080
 
 CMD ["python", "-u", "telegram_alerts.py"] 
