@@ -19,7 +19,7 @@ def publish_task(host, port, username, password, queue, params, use_proxy_rotati
         if key.startswith("setting="):
             setting_name = key[8:]  # Remove "setting=" prefix
             settings[setting_name] = value
-        elif not key in ["project", "spider", "_version", "jobid", "user_agent_type"]:
+        elif not key in ["project", "spider", "_version", "jobid", "user_agent_type", "user_agent"]:
             args[key] = value
     
     # Create the task payload
@@ -35,8 +35,13 @@ def publish_task(host, port, username, password, queue, params, use_proxy_rotati
         "auth_enabled": params.get("auth_enabled", "false") == "true",
         "username": params.get("username"),
         "password": params.get("password"),
-        "user_agent_type": params.get("user_agent_type", "desktop")
     }
+    
+    # Add user agent parameters
+    if "user_agent" in params:
+        task["user_agent"] = params.get("user_agent")
+    else:
+        task["user_agent_type"] = params.get("user_agent_type", "desktop")
     
     # Only add proxy field if not using rotation
     if not use_proxy_rotation and "proxy" in params:
@@ -85,7 +90,12 @@ def publish_task(host, port, username, password, queue, params, use_proxy_rotati
         
         print(f"Published task {task_id} to {queue}")
         print(f"Project: {params.get('project')}, Spider: {params.get('spider')}")
-        print(f"User-Agent Type: {params.get('user_agent_type', 'desktop')}")
+        
+        # Display user-agent information
+        if "user_agent" in params:
+            print(f"User-Agent: {params.get('user_agent')} (custom)")
+        else:
+            print(f"User-Agent Type: {params.get('user_agent_type', 'desktop')} (rotation)")
         
         # Display proxy information
         if use_proxy_rotation:
@@ -157,6 +167,8 @@ if __name__ == "__main__":
     parser.add_argument("--count", type=int, default=1, help="Number of spider tasks to send (default: 1)")
     parser.add_argument("--user-agent-type", default="desktop", choices=["desktop", "mobile", "tablet"], 
                         help="Type of User-Agent to use (default: desktop)")
+    parser.add_argument("--user-agent", 
+                        help="Specify a custom User-Agent string (overrides --user-agent-type)")
     
     args = parser.parse_args()
     
@@ -175,6 +187,10 @@ if __name__ == "__main__":
     
     # Set user agent type
     params["user_agent_type"] = args.user_agent_type
+    
+    # Set custom user-agent if specified
+    if args.user_agent:
+        params["user_agent"] = args.user_agent
         
     # Process settings
     if args.setting:

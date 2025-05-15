@@ -75,6 +75,25 @@ class UserAgentRotationMiddleware:
         """
         Apply User-Agent to outgoing requests
         """
+        # First check the spider's settings for USER_AGENT
+        user_agent_from_settings = spider.settings.get('USER_AGENT')
+        if user_agent_from_settings:
+            self.logger.info(f"Using User-Agent from settings: {user_agent_from_settings}")
+            request.headers['User-Agent'] = user_agent_from_settings.encode('utf-8')
+            # Store for Selenium if needed
+            request.meta['user_agent'] = user_agent_from_settings
+            return None
+            
+        # Check if a specific user-agent is set on the spider or request
+        direct_user_agent = getattr(spider, 'user_agent', None) or request.meta.get('user_agent')
+        
+        if direct_user_agent:
+            self.logger.info(f"Using specified User-Agent: {direct_user_agent}")
+            request.headers['User-Agent'] = direct_user_agent.encode('utf-8')
+            # Store for Selenium if needed
+            request.meta['user_agent'] = direct_user_agent
+            return None
+            
         # Get User-Agent type from spider or request meta
         ua_type = getattr(spider, 'user_agent_type', None) or request.meta.get('user_agent_type')
         

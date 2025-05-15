@@ -52,6 +52,8 @@ class SpiderRequest(BaseModel):
     username: Optional[str] = None
     password: Optional[str] = None
     proxy: Optional[str] = None
+    user_agent_type: Optional[str] = None
+    user_agent: Optional[str] = None
     kwargs: Optional[Dict[str, Any]] = {}
 
 class SpiderResponse(BaseModel):
@@ -323,6 +325,20 @@ async def schedule_spider(request: SpiderRequest, background_tasks: BackgroundTa
             proxy = await get_proxy()
             data["proxy"] = proxy
             print(f"Using rotated proxy: {proxy}")
+        
+        # Handle user agent settings
+        if request.user_agent:
+            # Use explicitly specified user agent
+            data["user_agent"] = request.user_agent
+            # Also set as a setting to ensure it's picked up
+            if not request.settings:
+                request.settings = {}
+            request.settings["USER_AGENT"] = request.user_agent
+            print(f"Using specified User-Agent: {request.user_agent}")
+        elif request.user_agent_type:
+            # Use user agent type for rotation
+            data["user_agent_type"] = request.user_agent_type
+            print(f"Using User-Agent rotation type: {request.user_agent_type}")
             
         # Add settings as JSON
         if request.settings:

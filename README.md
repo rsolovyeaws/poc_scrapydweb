@@ -182,6 +182,51 @@ curl -X POST "http://localhost:5001/schedule" \
   }'
 ```
 
+#### Использование указанного User-Agent
+
+Для использования конкретного User-Agent вместо ротации, добавьте поле `user_agent` в JSON:
+
+```bash
+curl -X POST "http://localhost:5001/schedule" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "project": "demo-1.0-py3.10",
+    "spider": "quotes_spa",
+    "_version": "1_0",
+    "jobid": "custom_job_id",
+    "settings": {
+      "CLOSESPIDER_TIMEOUT": "60",
+      "LOG_LEVEL": "INFO"
+    },
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+    "auth_enabled": false,
+    "username": "admin",
+    "password": "admin"
+  }'
+```
+
+#### Использование указанного User-Agent и Proxy
+
+```bash
+curl -X POST "http://localhost:5001/schedule" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "project": "demo-1.0-py3.10",
+    "spider": "quotes_spa",
+    "_version": "1_0",
+    "jobid": "custom_job_id_1",
+    "settings": {
+      "CLOSESPIDER_TIMEOUT": "60",
+      "LOG_LEVEL": "INFO"
+    },
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+    "auth_enabled": false,
+    "username": "admin",
+    "password": "admin",
+    "proxy": "http://tinyproxy2:8888"
+  }'
+```
+
 ### Тестирование ротации прокси с помощью test_balancer.sh
 
 Скрипт `test_balancer.sh` предназначен для тестирования балансировки нагрузки и ротации прокси. Он запускает заданное количество экземпляров паука `quotes_spa` из проекта `demo-1.0-py3.10` через API Gateway и отображает в реальном времени статус их выполнения на разных Scrapyd-узлах. Этот инструмент позволяет наглядно увидеть, как распределяются задачи между узлами и как работает ротация прокси-серверов.
@@ -201,6 +246,11 @@ curl -X POST "http://localhost:5001/schedule" \
 Также можно указать количество задач и тип User-Agent:
 ```bash
 ./test_balancer.sh --count=5 --use-proxy-rotation --user-agent-type=mobile
+```
+
+Или задать конкретный User-Agent:
+```bash
+./test_balancer.sh --count=3 --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
 ```
 
 ### Использование ротации прокси через RabbitMQ
@@ -232,6 +282,19 @@ python publish_rabbitmq_task.py \
   --count=3 \
   --proxy=http://tinyproxy1:8888 \
   --no-proxy-rotation \
+  --host localhost \
+  --port 5672 \
+  --project demo-1.0-py3.10 \
+  --spider quotes_spa
+```
+
+#### С пользовательским User-Agent:
+
+```bash
+# Запуск с пользовательским User-Agent
+python publish_rabbitmq_task.py \
+  --count=3 \
+  --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36" \
   --host localhost \
   --port 5672 \
   --project demo-1.0-py3.10 \

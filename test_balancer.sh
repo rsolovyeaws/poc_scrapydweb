@@ -10,6 +10,7 @@ SPIDER="quotes_spa"
 VERSION="1_0"
 JOB_COUNT=3  # Количество задач для запуска (по умолчанию 3)
 USER_AGENT_TYPE="desktop"  # Тип User-Agent (по умолчанию desktop)
+USER_AGENT=""  # Пользовательский User-Agent
 DEFAULT_PROXY="http://tinyproxy1:8888"  # Default proxy to use
 USE_PROXY_ROTATION=true  # Use proxy rotation instead of a fixed proxy
 DEBUG_MODE=false  # Режим отладки (сохраняет ответы API в файлы)
@@ -47,6 +48,9 @@ while [ $# -gt 0 ]; do
         --user-agent-type=*)
             USER_AGENT_TYPE=${1#*=}
             ;;
+        --user-agent=*)
+            USER_AGENT=${1#*=}
+            ;;
         --proxy=*)
             DEFAULT_PROXY=${1#*=}
             USE_PROXY_ROTATION=false
@@ -69,6 +73,7 @@ while [ $# -gt 0 ]; do
             echo "  --spider=NAME   Имя паука (по умолчанию: $SPIDER)"
             echo "  --version=VER   Версия проекта (по умолчанию: $VERSION)"
             echo "  --user-agent-type=TYPE Тип User-Agent (desktop, mobile, tablet) (по умолчанию: $USER_AGENT_TYPE)"
+            echo "  --user-agent=STRING    Пользовательский User-Agent (переопределяет user-agent-type)"
             echo "  --proxy=URL     Прокси-сервер (отключает ротацию, по умолчанию: $DEFAULT_PROXY)"
             echo "  --use-proxy-rotation  Использовать ротацию прокси (по умолчанию)"
             echo "  --no-proxy-rotation   Не использовать ротацию прокси"
@@ -87,7 +92,11 @@ done
 echo "=== ТЕСТ БАЛАНСИРОВКИ НАГРУЗКИ ==="
 echo "API Gateway: $API_URL"
 echo "Запуск $JOB_COUNT задач для проекта $PROJECT, паук $SPIDER"
-echo "Тип User-Agent: $USER_AGENT_TYPE"
+if [ -n "$USER_AGENT" ]; then
+    echo "Пользовательский User-Agent: $USER_AGENT"
+else
+    echo "Тип User-Agent: $USER_AGENT_TYPE"
+fi
 if [ "$USE_PROXY_ROTATION" = true ]; then
     echo "Прокси-сервер: Автоматическая ротация"
 else
@@ -137,36 +146,77 @@ for i in $(seq 1 $JOB_COUNT); do
     
     # Build the appropriate JSON payload based on proxy rotation setting
     if [ "$USE_PROXY_ROTATION" = true ]; then
-        json_payload='{
-          "project": "'"$PROJECT"'",
-          "spider": "'"$SPIDER"'",
-          "_version": "'"$VERSION"'",
-          "jobid": "'"$jobid"'",
-          "settings": {
-            "CLOSESPIDER_TIMEOUT": "120",
-            "LOG_LEVEL": "INFO"
-          },
-          "user_agent_type": "'"$USER_AGENT_TYPE"'",
-          "auth_enabled": "false",
-          "username": "admin",
-          "password": "admin"
-        }'
+        # With proxy rotation
+        if [ -n "$USER_AGENT" ]; then
+            # With custom user agent
+            json_payload='{
+              "project": "'"$PROJECT"'",
+              "spider": "'"$SPIDER"'",
+              "_version": "'"$VERSION"'",
+              "jobid": "'"$jobid"'",
+              "settings": {
+                "CLOSESPIDER_TIMEOUT": "120",
+                "LOG_LEVEL": "INFO"
+              },
+              "user_agent": "'"$USER_AGENT"'",
+              "auth_enabled": "false",
+              "username": "admin",
+              "password": "admin"
+            }'
+        else
+            # With user agent type
+            json_payload='{
+              "project": "'"$PROJECT"'",
+              "spider": "'"$SPIDER"'",
+              "_version": "'"$VERSION"'",
+              "jobid": "'"$jobid"'",
+              "settings": {
+                "CLOSESPIDER_TIMEOUT": "120",
+                "LOG_LEVEL": "INFO"
+              },
+              "user_agent_type": "'"$USER_AGENT_TYPE"'",
+              "auth_enabled": "false",
+              "username": "admin",
+              "password": "admin"
+            }'
+        fi
     else
-        json_payload='{
-          "project": "'"$PROJECT"'",
-          "spider": "'"$SPIDER"'",
-          "_version": "'"$VERSION"'",
-          "jobid": "'"$jobid"'",
-          "settings": {
-            "CLOSESPIDER_TIMEOUT": "120",
-            "LOG_LEVEL": "INFO"
-          },
-          "user_agent_type": "'"$USER_AGENT_TYPE"'",
-          "auth_enabled": "false",
-          "username": "admin",
-          "password": "admin",
-          "proxy": "'"$DEFAULT_PROXY"'"
-        }'
+        # With fixed proxy
+        if [ -n "$USER_AGENT" ]; then
+            # With custom user agent
+            json_payload='{
+              "project": "'"$PROJECT"'",
+              "spider": "'"$SPIDER"'",
+              "_version": "'"$VERSION"'",
+              "jobid": "'"$jobid"'",
+              "settings": {
+                "CLOSESPIDER_TIMEOUT": "120",
+                "LOG_LEVEL": "INFO"
+              },
+              "user_agent": "'"$USER_AGENT"'",
+              "auth_enabled": "false",
+              "username": "admin",
+              "password": "admin",
+              "proxy": "'"$DEFAULT_PROXY"'"
+            }'
+        else
+            # With user agent type
+            json_payload='{
+              "project": "'"$PROJECT"'",
+              "spider": "'"$SPIDER"'",
+              "_version": "'"$VERSION"'",
+              "jobid": "'"$jobid"'",
+              "settings": {
+                "CLOSESPIDER_TIMEOUT": "120",
+                "LOG_LEVEL": "INFO"
+              },
+              "user_agent_type": "'"$USER_AGENT_TYPE"'",
+              "auth_enabled": "false",
+              "username": "admin",
+              "password": "admin",
+              "proxy": "'"$DEFAULT_PROXY"'"
+            }'
+        fi
     fi
     
     response=$(curl -s -X POST "$API_URL/schedule" \
@@ -356,6 +406,7 @@ PROJECT="$PROJECT"
 JOB_COUNT="$JOB_COUNT"
 SPIDER="$SPIDER"
 USER_AGENT_TYPE="$USER_AGENT_TYPE"
+USER_AGENT="$USER_AGENT"
 DEFAULT_PROXY="$DEFAULT_PROXY"
 USE_PROXY_ROTATION="$USE_PROXY_ROTATION"
 DEBUG_MODE="$DEBUG_MODE"

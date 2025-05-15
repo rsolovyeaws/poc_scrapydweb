@@ -50,7 +50,7 @@ class QuotesSpaSpider(scrapy.Spider):
         "CLOSESPIDER_PAGECOUNT": 0,
     }
     # ─── ctor ────────────────────────────────────────────────────────────
-    def __init__(self, username=None, password=None, auth_enabled="true", proxy=None, user_agent_type=None, *a, **kw):
+    def __init__(self, username=None, password=None, auth_enabled="true", proxy=None, user_agent_type=None, user_agent=None, *a, **kw):
         super().__init__(*a, **kw)
         self.username = username or "admin"
         self.password = password or "admin"
@@ -59,9 +59,17 @@ class QuotesSpaSpider(scrapy.Spider):
         if self.proxy:
             self.logger.info(f"Proxy configured: {self.proxy}")
         
-        # Store User-Agent type parameter if provided
+        # Debug log all parameters
+        self.logger.info(f"Spider initialized with params: {a}, {kw}")
+        
+        # Store user agent parameters
+        self.user_agent = user_agent
+        if self.user_agent:
+            self.logger.info(f"Custom User-Agent configured: {self.user_agent}")
+        
+        # Store User-Agent type parameter if provided (only used if user_agent is not set)
         self.user_agent_type = user_agent_type
-        if self.user_agent_type:
+        if self.user_agent_type and not self.user_agent:
             self.logger.info(f"User-Agent type configured: {self.user_agent_type}")
         
         self.cookies, self.selenium_driver = [], None
@@ -92,6 +100,10 @@ class QuotesSpaSpider(scrapy.Spider):
         # Add User-Agent type to meta if specified
         if self.user_agent_type:
             meta['user_agent_type'] = self.user_agent_type
+        
+        # Add custom User-Agent to meta if specified
+        if self.user_agent:
+            meta['user_agent'] = self.user_agent
         
         if self.auth_enabled:
             self.logger.info("Authentication enabled → hitting login page")
@@ -207,6 +219,10 @@ class QuotesSpaSpider(scrapy.Spider):
         if self.user_agent_type:
             meta['user_agent_type'] = self.user_agent_type
             
+        # Add custom User-Agent to meta if specified
+        if self.user_agent:
+            meta['user_agent'] = self.user_agent
+        
         yield scrapy.Request(
             self.start_urls[0],
             self.parse,
@@ -282,6 +298,10 @@ class QuotesSpaSpider(scrapy.Spider):
             if self.user_agent_type:
                 meta['user_agent_type'] = self.user_agent_type
                 
+            # Add custom User-Agent to meta if specified
+            if self.user_agent:
+                meta['user_agent'] = self.user_agent
+            
             yield scrapy.Request(
                 response.urljoin(next_rel),
                 self.parse,
