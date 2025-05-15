@@ -39,12 +39,19 @@ SELENIUM_SCRIPT_TIMEOUT = 30
 # --- User-Agent Rotation Settings ---
 USER_AGENT_ROTATION_ENABLED = True
 USER_AGENT_SERVICE_URL = 'http://ua-rotator:5000'
+
+# --- Proxy Rotation Settings ---
+PROXY_ROTATION_ENABLED = True
+PROXY_SERVICE_URL = 'http://proxy-rotator:5000'
+PROXY = 'http://tinyproxy1:8888'  # fallback proxy
+
 # Use our custom middleware
 DOWNLOADER_MIDDLEWARES = {
     # Disable default user-agent middleware
     "scrapy.downloadermiddlewares.useragent.UserAgentMiddleware": None,
     # Our middlewares
     "demo.user_agent_middleware.UserAgentRotationMiddleware": 750,
+    "demo.proxy_middleware.ProxyRotationMiddleware": 760,
     "demo.custom_selenium_middleware.SeleniumMiddleware": 800,
     "scrapy.downloadermiddlewares.httpproxy.HttpProxyMiddleware": 850
 }

@@ -8,9 +8,10 @@ API_URL="http://localhost:5001"
 PROJECT="demo-1.0-py3.10"
 SPIDER="quotes_spa"
 VERSION="1_0"
-JOB_COUNT=2  # Количество задач для запуска (по умолчанию 2)
+JOB_COUNT=3  # Количество задач для запуска (по умолчанию 3)
 USER_AGENT_TYPE="desktop"  # Тип User-Agent (по умолчанию desktop)
-DEFAULT_PROXY="http://tinyproxy:8888"  # Default proxy to use
+DEFAULT_PROXY="http://tinyproxy1:8888"  # Default proxy to use
+USE_PROXY_ROTATION=true  # Use proxy rotation instead of a fixed proxy
 DEBUG_MODE=false  # Режим отладки (сохраняет ответы API в файлы)
 
 # Проверить, установлена ли утилита jq
@@ -48,6 +49,13 @@ while [ $# -gt 0 ]; do
             ;;
         --proxy=*)
             DEFAULT_PROXY=${1#*=}
+            USE_PROXY_ROTATION=false
+            ;;
+        --use-proxy-rotation)
+            USE_PROXY_ROTATION=true
+            ;;
+        --no-proxy-rotation)
+            USE_PROXY_ROTATION=false
             ;;
         --debug)
             DEBUG_MODE=true
@@ -55,13 +63,15 @@ while [ $# -gt 0 ]; do
         --help|-h)
             echo "Использование: $0 [параметры]"
             echo "Параметры:"
-            echo "  --count=N       Количество задач для запуска (по умолчанию: 2)"
+            echo "  --count=N       Количество задач для запуска (по умолчанию: 3)"
             echo "  --api-url=URL   URL API Gateway (по умолчанию: $API_URL)"
             echo "  --project=NAME  Имя проекта (по умолчанию: $PROJECT)"
             echo "  --spider=NAME   Имя паука (по умолчанию: $SPIDER)"
             echo "  --version=VER   Версия проекта (по умолчанию: $VERSION)"
             echo "  --user-agent-type=TYPE Тип User-Agent (desktop, mobile, tablet) (по умолчанию: $USER_AGENT_TYPE)"
-            echo "  --proxy=URL     Прокси-сервер (по умолчанию: $DEFAULT_PROXY)"
+            echo "  --proxy=URL     Прокси-сервер (отключает ротацию, по умолчанию: $DEFAULT_PROXY)"
+            echo "  --use-proxy-rotation  Использовать ротацию прокси (по умолчанию)"
+            echo "  --no-proxy-rotation   Не использовать ротацию прокси"
             echo "  --debug         Включить режим отладки (сохраняет ответы API в файлы)"
             echo "  --help, -h      Показать эту справку"
             exit 0
@@ -78,7 +88,11 @@ echo "=== ТЕСТ БАЛАНСИРОВКИ НАГРУЗКИ ==="
 echo "API Gateway: $API_URL"
 echo "Запуск $JOB_COUNT задач для проекта $PROJECT, паук $SPIDER"
 echo "Тип User-Agent: $USER_AGENT_TYPE"
-echo "Прокси-сервер: $DEFAULT_PROXY"
+if [ "$USE_PROXY_ROTATION" = true ]; then
+    echo "Прокси-сервер: Автоматическая ротация"
+else
+    echo "Прокси-сервер: $DEFAULT_PROXY (фиксированный)"
+fi
 echo ""
 
 # Проверяем доступность API Gateway
@@ -121,9 +135,24 @@ for i in $(seq 1 $JOB_COUNT); do
     
     echo "Запуск задачи $i (jobid: $jobid)..."
     
-    response=$(curl -s -X POST "$API_URL/schedule" \
-        -H "Content-Type: application/json" \
-        -d '{
+    # Build the appropriate JSON payload based on proxy rotation setting
+    if [ "$USE_PROXY_ROTATION" = true ]; then
+        json_payload='{
+          "project": "'"$PROJECT"'",
+          "spider": "'"$SPIDER"'",
+          "_version": "'"$VERSION"'",
+          "jobid": "'"$jobid"'",
+          "settings": {
+            "CLOSESPIDER_TIMEOUT": "120",
+            "LOG_LEVEL": "INFO"
+          },
+          "user_agent_type": "'"$USER_AGENT_TYPE"'",
+          "auth_enabled": "false",
+          "username": "admin",
+          "password": "admin"
+        }'
+    else
+        json_payload='{
           "project": "'"$PROJECT"'",
           "spider": "'"$SPIDER"'",
           "_version": "'"$VERSION"'",
@@ -137,7 +166,12 @@ for i in $(seq 1 $JOB_COUNT); do
           "username": "admin",
           "password": "admin",
           "proxy": "'"$DEFAULT_PROXY"'"
-        }')
+        }'
+    fi
+    
+    response=$(curl -s -X POST "$API_URL/schedule" \
+        -H "Content-Type: application/json" \
+        -d "$json_payload")
     
     status=$(echo $response | jq -r '.status')
     node=$(echo $response | jq -r '.node')
@@ -167,7 +201,11 @@ check_status() {
     echo "Проект: $PROJECT, Паук: $SPIDER"
     echo "Запущено задач: $JOB_COUNT"
     echo "Тип User-Agent: $USER_AGENT_TYPE"
-    echo "Прокси-сервер: $DEFAULT_PROXY"
+    if [ "$USE_PROXY_ROTATION" = true ]; then
+        echo "Прокси-сервер: Автоматическая ротация"
+    else
+        echo "Прокси-сервер: $DEFAULT_PROXY (фиксированный)"
+    fi
     echo ""
     
     # Получаем полный статус API Gateway
@@ -319,6 +357,7 @@ JOB_COUNT="$JOB_COUNT"
 SPIDER="$SPIDER"
 USER_AGENT_TYPE="$USER_AGENT_TYPE"
 DEFAULT_PROXY="$DEFAULT_PROXY"
+USE_PROXY_ROTATION="$USE_PROXY_ROTATION"
 DEBUG_MODE="$DEBUG_MODE"
 
 # Функция для проверки статуса задач
@@ -328,7 +367,11 @@ check_status() {
     echo "Проект: \$PROJECT, Паук: \$SPIDER"
     echo "Запущено задач: \$JOB_COUNT"
     echo "Тип User-Agent: \$USER_AGENT_TYPE"
-    echo "Прокси-сервер: \$DEFAULT_PROXY"
+    if [ "\$USE_PROXY_ROTATION" = true ]; then
+        echo "Прокси-сервер: Автоматическая ротация"
+    else
+        echo "Прокси-сервер: \$DEFAULT_PROXY (фиксированный)"
+    fi
     echo ""
     
     # Получаем полный статус API Gateway

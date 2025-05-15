@@ -1,0 +1,6 @@
+flask>=2.0.0
+requests>=2.25.1
+flask-cors>=3.0.10
+prometheus-client>=0.14.1
+PyYAML>=6.0
+python-dotenv>=0.19.0 

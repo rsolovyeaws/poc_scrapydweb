@@ -201,10 +201,28 @@ class SeleniumMiddleware:
             o.add_argument(f'--user-agent={user_agent}')
             spider.logger.debug(f"Selenium using User-Agent: {user_agent}")
         
-        # Add proxy if provided in spider settings
-        if spider and hasattr(spider, 'proxy') and spider.proxy:
-            o.add_argument(f'--proxy-server={spider.proxy}')
-            spider.logger.debug(f"Selenium using proxy: {spider.proxy}")
+        # Add proxy if provided in request meta, spider attributes, or settings
+        selenium_proxy = None
+        if spider:
+            # Check for proxy in request meta (highest priority)
+            if hasattr(spider, 'current_request') and getattr(spider.current_request, 'meta', {}).get('selenium_proxy'):
+                selenium_proxy = spider.current_request.meta.get('selenium_proxy')
+                spider.logger.debug(f"Using proxy from request meta: {selenium_proxy}")
+            # Check for proxy in spider attributes (medium priority)
+            elif hasattr(spider, 'proxy') and spider.proxy:
+                selenium_proxy = spider.proxy
+                spider.logger.debug(f"Using proxy from spider attribute: {selenium_proxy}")
+            # Check for proxy in settings (lowest priority)
+            elif hasattr(self.crawler.settings, 'get') and self.crawler.settings.get('PROXY'):
+                selenium_proxy = self.crawler.settings.get('PROXY')
+                spider.logger.debug(f"Using proxy from settings: {selenium_proxy}")
+                
+            # Apply proxy if found
+            if selenium_proxy:
+                o.add_argument(f'--proxy-server={selenium_proxy}')
+                spider.logger.debug(f"Selenium using proxy: {selenium_proxy}")
+                # Add a prominent log entry for the proxy being used with Selenium
+                spider.logger.info(f"🌐 SELENIUM PROXY: {selenium_proxy}")
         
         return o
     
@@ -255,6 +273,9 @@ class SeleniumMiddleware:
         
         # Mark this request as being processed
         self._waiting_requests.add(id(request))
+        
+        # Store current request in spider for proxy and user-agent access
+        spider.current_request = request
         
         try:
             # Get User-Agent from request headers

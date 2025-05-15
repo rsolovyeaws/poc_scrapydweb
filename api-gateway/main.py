@@ -25,6 +25,14 @@ SELENIUM_ACTIVE_KEY = "selenium:active_sessions"
 SELENIUM_LOCK_KEY = "selenium:lock"
 SELENIUM_QUEUE_CHECK_INTERVAL = 1  # seconds
 
+# Proxy configuration
+PROXY_ROTATION_ENABLED = os.getenv("PROXY_ROTATION_ENABLED", "true").lower() == "true"
+PROXY_SERVICE_URL = os.getenv("PROXY_SERVICE_URL", "http://proxy-rotator:5000")
+DEFAULT_PROXY = os.getenv("DEFAULT_PROXY", "http://tinyproxy1:8888")
+
+# User-Agent configuration
+USER_AGENT_SERVICE_URL = os.getenv("USER_AGENT_SERVICE_URL", "http://ua-rotator:5000")
+
 # Connect to Redis
 redis_client = redis.Redis(
     host=os.getenv("REDIS_HOST", "redis"),
@@ -121,6 +129,25 @@ async def get_selenium_status():
         "available_sessions": max(0, MAX_SELENIUM_SESSIONS - active_sessions),
         "queued_jobs": queued_jobs
     }
+
+async def get_proxy():
+    """Get a proxy from the proxy rotation service"""
+    if not PROXY_ROTATION_ENABLED:
+        return DEFAULT_PROXY
+        
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{PROXY_SERVICE_URL}/proxy", timeout=2.0)
+            if response.status_code == 200:
+                data = response.json()
+                proxy = data.get("proxy")
+                if proxy:
+                    return proxy
+    except Exception as e:
+        print(f"Error getting proxy from rotation service: {str(e)}")
+            
+    # Fallback to default proxy
+    return DEFAULT_PROXY
 
 def acquire_selenium_session(job_details):
     """Try to acquire a Selenium session or queue job"""
@@ -286,9 +313,16 @@ async def schedule_spider(request: SpiderRequest, background_tasks: BackgroundTa
             
         if request.password:
             data["password"] = request.password
-            
+        
+        # Handle proxy settings
         if request.proxy:
+            # Use explicitly specified proxy
             data["proxy"] = request.proxy
+        elif PROXY_ROTATION_ENABLED:
+            # Get a proxy from the rotation service
+            proxy = await get_proxy()
+            data["proxy"] = proxy
+            print(f"Using rotated proxy: {proxy}")
             
         # Add settings as JSON
         if request.settings:

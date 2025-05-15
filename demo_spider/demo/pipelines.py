@@ -3,6 +3,7 @@ import hashlib
 import json
 from datetime import datetime
 from io import BytesIO
+import random
 
 import boto3
 from botocore.exceptions import ClientError
@@ -75,11 +76,23 @@ class S3StoragePipeline:
         
         # Add item values to make it unique per item
         for k, v in sorted(item.items()):
-            if k != 'crawl_time':  # Skip timestamp as it changes
+            if k not in ['crawl_time', 'proxy', 'user_agent']:  # Skip fields that might change
                 content_str += str(v)
+        
+        # Add timestamp for absolute uniqueness
+        content_str += datetime.now().isoformat()
+        
+        # Add a random component to ensure uniqueness
+        content_str += str(random.random())
+        
+        # Add spider name and job ID if available
+        if hasattr(spider, 'name'):
+            content_str += spider.name
+        if hasattr(spider, 'jobid'):
+            content_str += spider.jobid
                 
-        # Generate a hash of the content
-        item_hash = hashlib.md5(content_str.encode('utf-8')).hexdigest()[:10]
+        # Generate a hash of the content - use longer hash for better uniqueness
+        item_hash = hashlib.md5(content_str.encode('utf-8')).hexdigest()[:16]
         
         return item_hash
     
@@ -91,19 +104,30 @@ class S3StoragePipeline:
         enriched_item['spider_name'] = spider.name
         enriched_item['source_url'] = spider.current_url if hasattr(spider, 'current_url') else spider.start_urls[0]
         
-        # Add User-Agent information if not already in the item
-        if 'user_agent' not in enriched_item or not enriched_item['user_agent']:
-            current_url = spider.current_url if hasattr(spider, 'current_url') else None
-            if current_url and hasattr(spider, 'user_agents_used') and current_url in spider.user_agents_used:
-                enriched_item['user_agent'] = spider.user_agents_used[current_url]
+        # Get URL for the current item
+        current_url = spider.current_url if hasattr(spider, 'current_url') else spider.start_urls[0]
         
-        # Add proxy information if not already in the item
-        if 'proxy' not in enriched_item or not enriched_item['proxy']:
-            current_url = spider.current_url if hasattr(spider, 'current_url') else None
-            if current_url and hasattr(spider, 'proxies_used') and current_url in spider.proxies_used:
-                enriched_item['proxy'] = spider.proxies_used[current_url]
-            elif hasattr(spider, 'proxy') and spider.proxy:
-                enriched_item['proxy'] = spider.proxy
+        # Get User-Agent for this URL
+        user_agent = None
+        if hasattr(spider, 'user_agents_used') and current_url in spider.user_agents_used:
+            user_agent = spider.user_agents_used[current_url]
+        elif hasattr(spider, 'user_agent'):
+            user_agent = spider.user_agent
+        
+        # Get proxy for this URL
+        proxy = None
+        if hasattr(spider, 'proxies_used') and current_url in spider.proxies_used:
+            proxy = spider.proxies_used[current_url]
+        elif hasattr(spider, 'proxy'):
+            proxy = spider.proxy
+        
+        # Log the proxy being used for this item
+        if proxy:
+            spider.logger.info(f"📊 PIPELINE: Item from {current_url} processed with proxy: {proxy}")
+        
+        enriched_item['url'] = current_url
+        enriched_item['user_agent'] = user_agent
+        enriched_item['proxy'] = proxy
         
         # Create JSON from item
         json_item = json.dumps(enriched_item, ensure_ascii=False)
@@ -115,7 +139,7 @@ class S3StoragePipeline:
         item_hash = self._generate_unique_id(enriched_item, spider)
         
         # Generate S3 key (path) with unique identifier to prevent overwriting
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')  # Add milliseconds for more uniqueness
         url_path = ""
         
         if hasattr(spider, 'current_url') and spider.current_url:
@@ -128,8 +152,22 @@ class S3StoragePipeline:
                 page_num = url.split('/page/')[1].split('/')[0]
                 url_path = f"page{page_num}_"
         
+        # Add a random component to ensure absolute uniqueness 
+        random_suffix = str(random.randint(1000, 9999))
+        
+        # Add job ID if available for better organization
+        job_id_suffix = ""
+        if hasattr(spider, 'jobid'):
+            job_id_suffix = f"_job{spider.jobid}"
+        
+        # Add proxy info to filename (shortened/hashed to keep filename reasonable)
+        proxy_suffix = ""
+        if proxy:
+            proxy_hash = hashlib.md5(proxy.encode('utf-8')).hexdigest()[:8]
+            proxy_suffix = f"_px{proxy_hash}"
+        
         # Create a filename with timestamp, counter, item_hash to ensure uniqueness
-        filename = f"{spider.name}_{timestamp}_{url_path}item{self.item_count}_{item_hash}.json"
+        filename = f"{spider.name}_{timestamp}_{url_path}item{self.item_count}_{item_hash}{job_id_suffix}{proxy_suffix}_{random_suffix}.json"
         s3_key = f"{self.folder_name}/{spider.name}/{datetime.now().strftime('%Y-%m-%d')}/{filename}"
         
         # Upload file to S3
@@ -199,18 +237,26 @@ class PostgresPipeline:
         current_url = spider.current_url if hasattr(spider, 'current_url') else spider.start_urls[0]
         
         # Get User-Agent for this URL
-        user_agent = enriched_item.get('user_agent', None)
-        if not user_agent and hasattr(spider, 'user_agents_used') and current_url in spider.user_agents_used:
+        user_agent = None
+        if hasattr(spider, 'user_agents_used') and current_url in spider.user_agents_used:
             user_agent = spider.user_agents_used[current_url]
-        
+        elif hasattr(spider, 'user_agent'):
+            user_agent = spider.user_agent
+            
         # Get proxy for this URL
-        proxy = enriched_item.get('proxy', None)
-        if not proxy:
-            if hasattr(spider, 'proxies_used') and current_url in spider.proxies_used:
-                proxy = spider.proxies_used[current_url]
-            elif hasattr(spider, 'proxy') and spider.proxy:
-                proxy = spider.proxy
-
+        proxy = None
+        if hasattr(spider, 'proxies_used') and current_url in spider.proxies_used:
+            proxy = spider.proxies_used[current_url]
+        elif hasattr(spider, 'proxy'):
+            proxy = spider.proxy
+        
+        # We're removing the logging here to avoid duplication with S3 pipeline
+        # The S3 pipeline will handle the proxy logging
+            
+        enriched_item['url'] = current_url
+        enriched_item['user_agent'] = user_agent
+        enriched_item['proxy'] = proxy
+        
         # Insert data into the database
         self.cursor.execute(
             f"""

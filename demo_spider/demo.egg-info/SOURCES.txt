@@ -6,6 +6,7 @@ demo/custom_selenium_middleware.py
 demo/items.py
 demo/middlewares.py
 demo/pipelines.py
+demo/proxy_middleware.py
 demo/redis_cookies_middleware.py
 demo/settings.py
 demo/user_agent_middleware.py
