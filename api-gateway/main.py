@@ -30,6 +30,9 @@ PROXY_ROTATION_ENABLED = os.getenv("PROXY_ROTATION_ENABLED", "true").lower() == 
 PROXY_SERVICE_URL = os.getenv("PROXY_SERVICE_URL", "http://proxy-rotator:5000")
 DEFAULT_PROXY = os.getenv("DEFAULT_PROXY", "http://tinyproxy1:8888")
 
+# Debug log proxy configuration
+print(f"DEBUG: Proxy configuration: ROTATION_ENABLED={PROXY_ROTATION_ENABLED}, SERVICE_URL={PROXY_SERVICE_URL}, DEFAULT_PROXY={DEFAULT_PROXY}")
+
 # User-Agent configuration
 USER_AGENT_SERVICE_URL = os.getenv("USER_AGENT_SERVICE_URL", "http://ua-rotator:5000")
 
@@ -273,6 +276,9 @@ async def reset_selenium():
 async def schedule_spider(request: SpiderRequest, background_tasks: BackgroundTasks):
     """Schedule a spider on the best available Scrapyd instance with Selenium resource management"""
     try:
+        # Debug log the exact request parameters
+        print(f"DEBUG: Received schedule request with parameters: {request}")
+        
         # Check if Selenium counter is stuck (all active but no actual running jobs)
         statuses = await get_server_status()
         selenium_status = await get_selenium_status()
@@ -330,10 +336,6 @@ async def schedule_spider(request: SpiderRequest, background_tasks: BackgroundTa
         if request.user_agent:
             # Use explicitly specified user agent
             data["user_agent"] = request.user_agent
-            # Also set as a setting to ensure it's picked up
-            if not request.settings:
-                request.settings = {}
-            request.settings["USER_AGENT"] = request.user_agent
             print(f"Using specified User-Agent: {request.user_agent}")
         elif request.user_agent_type:
             # Use user agent type for rotation
@@ -348,6 +350,9 @@ async def schedule_spider(request: SpiderRequest, background_tasks: BackgroundTa
         if request.kwargs:
             for k, v in request.kwargs.items():
                 data[k] = v
+        
+        # Debug log the actual data being sent to Scrapyd
+        print(f"DEBUG: Data being sent to Scrapyd: {data}")
         
         # Check selenium resource utilization
         selenium_status = await get_selenium_status()

@@ -75,16 +75,7 @@ class UserAgentRotationMiddleware:
         """
         Apply User-Agent to outgoing requests
         """
-        # First check the spider's settings for USER_AGENT
-        user_agent_from_settings = spider.settings.get('USER_AGENT')
-        if user_agent_from_settings:
-            self.logger.info(f"Using User-Agent from settings: {user_agent_from_settings}")
-            request.headers['User-Agent'] = user_agent_from_settings.encode('utf-8')
-            # Store for Selenium if needed
-            request.meta['user_agent'] = user_agent_from_settings
-            return None
-            
-        # Check if a specific user-agent is set on the spider or request
+        # First check if the request or spider has a specific user-agent
         direct_user_agent = getattr(spider, 'user_agent', None) or request.meta.get('user_agent')
         
         if direct_user_agent:
@@ -97,11 +88,6 @@ class UserAgentRotationMiddleware:
         # Get User-Agent type from spider or request meta
         ua_type = getattr(spider, 'user_agent_type', None) or request.meta.get('user_agent_type')
         
-        # Check current User-Agent for debugging
-        current_ua = request.headers.get('User-Agent', b'').decode('utf-8', errors='ignore') if 'User-Agent' in request.headers else None
-        if current_ua:
-            self.logger.debug(f"Request already has User-Agent: {current_ua} - Will override")
-            
         # Always set a User-Agent regardless of whether one is already set
         # This ensures our User-Agent takes precedence over any default ones
         user_agent = self.get_random_user_agent(ua_type)

@@ -253,6 +253,11 @@ curl -X POST "http://localhost:5001/schedule" \
 ./test_balancer.sh --count=3 --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
 ```
 
+User-Agent + Proxy
+```bash
+./test_balancer.sh --count=3 --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36" --proxy=http://tinyproxy1:8888
+```
+
 ### Использование ротации прокси через RabbitMQ
 
 При запуске задач через RabbitMQ с использованием утилиты `publish_rabbitmq_task.py` также доступны оба режима работы с прокси:

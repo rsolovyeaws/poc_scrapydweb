@@ -67,9 +67,9 @@ class QuotesSpaSpider(scrapy.Spider):
         if self.user_agent:
             self.logger.info(f"Custom User-Agent configured: {self.user_agent}")
         
-        # Store User-Agent type parameter if provided (only used if user_agent is not set)
-        self.user_agent_type = user_agent_type
-        if self.user_agent_type and not self.user_agent:
+        # Only use user_agent_type if no direct user_agent is specified
+        self.user_agent_type = None if self.user_agent else user_agent_type
+        if self.user_agent_type:
             self.logger.info(f"User-Agent type configured: {self.user_agent_type}")
         
         self.cookies, self.selenium_driver = [], None
