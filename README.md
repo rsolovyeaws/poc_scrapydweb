@@ -303,7 +303,23 @@ python publish_rabbitmq_task.py \
   --host localhost \
   --port 5672 \
   --project demo-1.0-py3.10 \
-  --spider quotes_spa
+  --spider quotes_spa \
+  --use-proxy-rotation
+```
+
+#### С пользовательским User-Agent и Proxy:
+
+```bash
+# Запуск с пользовательским User-Agent
+python publish_rabbitmq_task.py \
+  --count=3 \
+  --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36" \
+  --host localhost \
+  --port 5672 \
+  --project demo-1.0-py3.10 \
+  --spider quotes_spa \
+  --proxy=http://tinyproxy1:8888 \
+  --no-proxy-rotation 
 ```
 
 ### Мониторинг использования прокси

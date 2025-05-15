@@ -26,6 +26,9 @@ class SpiderTask(BaseModel):
     username: Optional[str] = Field(default=None, description="Authentication username")
     password: Optional[str] = Field(default=None, description="Authentication password")
     proxy: Optional[str] = Field(default=None, description="Proxy URL for the spider")
+    # Add user agent parameters
+    user_agent_type: Optional[str] = Field(default=None, description="Type of User-Agent to use")
+    user_agent: Optional[str] = Field(default=None, description="Custom User-Agent string")
     
     def to_scrapyd_params(self) -> Dict[str, Any]:
         """
@@ -52,5 +55,11 @@ class SpiderTask(BaseModel):
         # Add proxy if specified
         if self.proxy:
             params["proxy"] = self.proxy
+            
+        # Add user agent parameters
+        if self.user_agent:
+            params["user_agent"] = self.user_agent
+        elif self.user_agent_type:
+            params["user_agent_type"] = self.user_agent_type
         
         return params 

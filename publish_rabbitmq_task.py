@@ -37,10 +37,10 @@ def publish_task(host, port, username, password, queue, params, use_proxy_rotati
         "password": params.get("password"),
     }
     
-    # Add user agent parameters
+    # Add user agent parameters - make sure they're direct parameters, not in args
     if "user_agent" in params:
         task["user_agent"] = params.get("user_agent")
-    else:
+    elif "user_agent_type" in params:
         task["user_agent_type"] = params.get("user_agent_type", "desktop")
     
     # Only add proxy field if not using rotation
