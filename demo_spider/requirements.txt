@@ -5,3 +5,4 @@ Uberegg
 redis==5.0.1
 boto3==1.33.1
 botocore==1.33.1
+requests==2.31.0
