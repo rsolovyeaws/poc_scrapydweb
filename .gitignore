@@ -19,4 +19,5 @@ node_modules/
 # test
 
 # Spider logs
-spider_logs/
+spider_logs/*
+!spider_logs/.gitkeep
