@@ -22,7 +22,8 @@ RUN pip install --no-cache-dir --break-system-packages \
     redis==5.0.1 \
     requests==2.31.0 \
     prometheus_client==0.17.1 \
-    scrapy-prometheus-exporter
+    scrapy-prometheus-exporter \
+    psutil
 
 # Install scrapydweb with logparser
 RUN pip install --break-system-packages scrapydweb[logparser]

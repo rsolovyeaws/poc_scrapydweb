@@ -1,13 +1,12 @@
 """
-Prometheus metrics exporter for Scrapyd.
-This script collects metrics from Scrapyd API and exposes them for Prometheus.
+Simple Prometheus metrics exporter for Scrapyd.
 """
 
 import time
 import threading
-import json
-import random
 import requests
+import psutil
+import os
 from prometheus_client import start_http_server, Gauge, Counter
 
 # Define metrics
@@ -18,6 +17,9 @@ FINISHED_JOBS = Counter('scrapyd_finished_jobs_total', 'Total number of finished
 MEMORY_USAGE = Gauge('scrapyd_memory_usage_bytes', 'Memory usage of Scrapyd process')
 CPU_USAGE = Gauge('scrapyd_cpu_usage_percent', 'CPU usage of Scrapyd process')
 
+# Track already counted jobs
+processed_job_ids = set()
+
 class ScrapydExporter:
     """
     Prometheus exporter for Scrapyd metrics.
@@ -26,8 +28,34 @@ class ScrapydExporter:
         self.scrapyd_url = scrapyd_url
         self.update_interval = update_interval
         self.running = True
-        self.projects = set(["demo"])  # Start with a demo project
-        self.projects_spiders = {"demo": set(["test_spider"])}
+        self.process = None
+        self.find_scrapyd_process()
+    
+    def find_scrapyd_process(self):
+        """Find the Scrapyd process for monitoring."""
+        try:
+            for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+                # Look for the scrapyd process by command line
+                if proc.info['name'] == 'python' and any('scrapyd' in cmd.lower() for cmd in proc.info['cmdline'] if cmd):
+                    self.process = proc
+                    print(f"Found Scrapyd process with PID {proc.pid}")
+                    return
+            
+            # If not found by command line, try finding by name
+            for proc in psutil.process_iter(['pid', 'name']):
+                if 'scrapyd' in proc.info['name'].lower():
+                    self.process = proc
+                    print(f"Found Scrapyd process with PID {proc.pid}")
+                    return
+            
+            # If we still didn't find it, use the parent process as a fallback
+            self.process = psutil.Process(os.getppid())
+            print(f"Using parent process with PID {self.process.pid} as fallback")
+        except Exception as e:
+            print(f"Error finding Scrapyd process: {e}")
+            # Use current process as a last resort
+            self.process = psutil.Process()
+            print(f"Using current process with PID {self.process.pid} as fallback")
     
     def start(self):
         """Start the metrics collection thread."""
@@ -48,101 +76,92 @@ class ScrapydExporter:
                 time.sleep(self.update_interval)
             except Exception as e:
                 print(f"Error collecting metrics: {e}")
-                SCRAPYD_UP.set(0)
                 time.sleep(self.update_interval)
     
     def _update_metrics(self):
         """Update all metrics."""
+        global processed_job_ids
+        
+        # Update system metrics using psutil
+        self._update_system_metrics()
+        
+        # Check Scrapyd status
         try:
-            # Set Scrapyd as up
-            SCRAPYD_UP.set(1)
-            
-            # Generate mock metrics
-            CPU_USAGE.set(random.uniform(5, 30))  # Random value between 5-30%
-            MEMORY_USAGE.set(random.randint(50_000_000, 200_000_000))  # Random value ~50-200MB
-            
-            # Try to get actual data from Scrapyd API
-            try:
-                response = requests.get(f"{self.scrapyd_url}/daemonstatus.json", timeout=2)
-                if response.status_code != 200:
-                    # If Scrapyd API is not accessible, just use mock data
-                    self._set_mock_data()
-                    return
-            except:
-                # If request fails, use mock data
-                self._set_mock_data()
+            response = requests.get(f"{self.scrapyd_url}/daemonstatus.json", timeout=2)
+            if response.status_code == 200 and response.json().get('status') == 'ok':
+                SCRAPYD_UP.set(1)
+            else:
+                SCRAPYD_UP.set(0)
                 return
-            
-            # Get list of projects
-            try:
-                response = requests.get(f"{self.scrapyd_url}/listprojects.json", timeout=2)
-                if response.status_code == 200:
-                    data = response.json()
-                    if data.get('status') == 'ok':
-                        proj = data.get('projects', [])
-                        if proj:
-                            self.projects = set(proj)
-            except:
-                pass
-            
-            # If no projects found from API, use mock data
-            if not self.projects:
-                self._set_mock_data()
-                return
-                
-            # Get jobs stats for each project
-            for project in self.projects:
-                # Get spiders for the project
-                if project not in self.projects_spiders:
-                    try:
-                        response = requests.get(f"{self.scrapyd_url}/listspiders.json?project={project}", timeout=2)
-                        if response.status_code == 200:
-                            data = response.json()
-                            if data.get('status') == 'ok':
-                                spiders = data.get('spiders', ["default_spider"])
-                                if spiders:
-                                    self.projects_spiders[project] = set(spiders)
-                    except:
-                        self.projects_spiders[project] = set(["default_spider"])
-                
-                # Get running jobs or set mock data
-                try:
-                    response = requests.get(f"{self.scrapyd_url}/listjobs.json?project={project}", timeout=2)
-                    if response.status_code == 200:
-                        data = response.json()
-                        if data.get('status') == 'ok':
-                            running_jobs = data.get('running', [])
-                            pending_jobs = data.get('pending', [])
-                            
-                            RUNNING_JOBS.labels(project=project).set(len(running_jobs) or random.randint(1, 3))
-                            PENDING_JOBS.labels(project=project).set(len(pending_jobs) or random.randint(0, 2))
-                            
-                            # Generate some sample finished jobs
-                            for spider in self.projects_spiders.get(project, ["default_spider"]):
-                                FINISHED_JOBS.labels(project=project, spider=spider).inc(random.randint(1, 3))
-                except:
-                    # Set mock data if we can't get real data
-                    RUNNING_JOBS.labels(project=project).set(random.randint(1, 3))
-                    PENDING_JOBS.labels(project=project).set(random.randint(0, 2))
-                    for spider in self.projects_spiders.get(project, ["default_spider"]):
-                        FINISHED_JOBS.labels(project=project, spider=spider).inc(random.randint(1, 3))
+        except:
+            SCRAPYD_UP.set(0)
+            return
         
-        except Exception as e:
-            print(f"Error in metrics collection: {e}")
-            # If any error, ensure we still have some data showing
-            self._set_mock_data()
+        # Get all projects
+        try:
+            response = requests.get(f"{self.scrapyd_url}/listprojects.json", timeout=2)
+            if response.status_code == 200 and response.json().get('status') == 'ok':
+                projects = response.json().get('projects', [])
+            else:
+                return
+        except:
+            return
+            
+        # Initialize all project metrics to 0
+        for project in projects:
+            RUNNING_JOBS.labels(project=project).set(0)
+            PENDING_JOBS.labels(project=project).set(0)
+            
+        # Get job stats for each project
+        for project in projects:
+            try:
+                response = requests.get(f"{self.scrapyd_url}/listjobs.json?project={project}", timeout=2)
+                if response.status_code != 200 or response.json().get('status') != 'ok':
+                    continue
+                    
+                data = response.json()
+                running_jobs = data.get('running', [])
+                pending_jobs = data.get('pending', [])
+                finished_jobs = data.get('finished', [])
+                
+                # Set running and pending counts
+                RUNNING_JOBS.labels(project=project).set(len(running_jobs))
+                PENDING_JOBS.labels(project=project).set(len(pending_jobs))
+                
+                # Count finished jobs we haven't seen before
+                for job in finished_jobs:
+                    job_id = job.get('id')
+                    if job_id and job_id not in processed_job_ids:
+                        spider = job.get('spider', 'unknown')
+                        FINISHED_JOBS.labels(project=project, spider=spider).inc()
+                        processed_job_ids.add(job_id)
+                
+                # Limit the processed jobs set size
+                if len(processed_job_ids) > 1000:
+                    processed_job_ids = set(list(processed_job_ids)[-500:])
+                    
+            except Exception as e:
+                print(f"Error collecting jobs for project {project}: {e}")
+                continue
     
-    def _set_mock_data(self):
-        """Set mock data to ensure dashboard always shows something"""
-        SCRAPYD_UP.set(1)
-        CPU_USAGE.set(random.uniform(5, 30))
-        MEMORY_USAGE.set(random.randint(50_000_000, 200_000_000))
-        
-        for project in self.projects or ["demo"]:
-            RUNNING_JOBS.labels(project=project).set(random.randint(1, 3))
-            PENDING_JOBS.labels(project=project).set(random.randint(0, 2))
-            for spider in self.projects_spiders.get(project, ["test_spider"]):
-                FINISHED_JOBS.labels(project=project, spider=spider).inc(random.randint(1, 3))
+    def _update_system_metrics(self):
+        """Update system metrics using psutil."""
+        try:
+            if self.process and self.process.is_running():
+                # Update CPU usage (percentage)
+                cpu_percent = self.process.cpu_percent(interval=None)
+                CPU_USAGE.set(cpu_percent)
+                
+                # Update memory usage (bytes)
+                memory_info = self.process.memory_info()
+                MEMORY_USAGE.set(memory_info.rss)  # Resident Set Size in bytes
+            else:
+                # If process is not running, try to find it again
+                self.find_scrapyd_process()
+        except Exception as e:
+            print(f"Error updating system metrics: {e}")
+            # Try to find the process again
+            self.find_scrapyd_process()
 
 if __name__ == '__main__':
     # Start HTTP server for Prometheus metrics
