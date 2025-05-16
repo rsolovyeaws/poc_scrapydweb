@@ -50,17 +50,25 @@ class RedisCookiesMiddleware:
     # ─────────────────────────── helpers ───────────────────────────────
     def _get_key(self, spider):
         """Generate a unique Redis key for this spider"""
-        return f"{self.redis_key_prefix}{spider.name}"
+        # Using domain-based key instead of spider-specific key to share cookies between spiders
+        return f"{self.redis_key_prefix}global"  # Use a global key for all spiders
 
     # ─────────────────────────── events ────────────────────────────────
     def spider_opened(self, spider):
         """Load cookies from Redis when spider starts"""
         key = self._get_key(spider)
         try:
+            # Check if valid cookies exist first before trying to login
             cookies_data = self.redis_client.get(key)
             if cookies_data:
                 spider.cookies = json.loads(cookies_data)
                 spider.logger.info(f"Loaded {len(spider.cookies)} cookies from Redis")
+                
+                # Skip login if we already have valid authentication cookies
+                if any(cookie.get('name') == 'session' for cookie in spider.cookies):
+                    spider.logger.info("Found existing session cookie - will attempt to use it")
+                    # Set a flag to indicate we're using existing cookies
+                    spider.using_redis_session = True
             else:
                 spider.cookies = []
                 spider.logger.info("No cookies found in Redis")

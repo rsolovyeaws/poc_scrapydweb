@@ -107,19 +107,32 @@ class QuotesSpaSpider(scrapy.Spider):
         Start with the login page if authentication is enabled
         """
         if getattr(self, 'auth_enabled', False):
-            self.logger.info("Authentication enabled → hitting login page")
-            return [scrapy.Request(
-                self.login_url,
-                callback=self.perform_login,
-                meta={
-                    "selenium": True,
-                    "wait_time": 10,
-                    # Make sure we keep the driver alive for the login process
-                    "custom_driver": False,
-                    "preserve_driver": True
-                },
-                dont_filter=True
-            )]
+            # Check if we already have a valid session from Redis
+            if hasattr(self, 'using_redis_session') and self.using_redis_session:
+                self.logger.info("Using existing cookies from Redis → skipping login")
+                return [scrapy.Request(
+                    url, 
+                    callback=self.parse, 
+                    meta={
+                        "selenium": True, 
+                        "wait_time": 10,
+                        "cookies": self.cookies  # Pass cookies to the driver
+                    }
+                ) for url in self.start_urls]
+            else:
+                self.logger.info("Authentication enabled → hitting login page")
+                return [scrapy.Request(
+                    self.login_url,
+                    callback=self.perform_login,
+                    meta={
+                        "selenium": True,
+                        "wait_time": 10,
+                        # Make sure we keep the driver alive for the login process
+                        "custom_driver": False,
+                        "preserve_driver": True
+                    },
+                    dont_filter=True
+                )]
         else:
             self.logger.info("Authentication disabled → going straight to quotes")
             return [scrapy.Request(

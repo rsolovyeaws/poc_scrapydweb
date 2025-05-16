@@ -155,11 +155,11 @@ for i in $(seq 1 $JOB_COUNT); do
               "_version": "'"$VERSION"'",
               "jobid": "'"$jobid"'",
               "settings": {
-                "CLOSESPIDER_TIMEOUT": "120",
+                "CLOSESPIDER_TIMEOUT": "360",
                 "LOG_LEVEL": "INFO"
               },
               "user_agent": "'"$USER_AGENT"'",
-              "auth_enabled": "false",
+              "auth_enabled": "true",
               "username": "admin",
               "password": "admin"
             }'
@@ -171,11 +171,11 @@ for i in $(seq 1 $JOB_COUNT); do
               "_version": "'"$VERSION"'",
               "jobid": "'"$jobid"'",
               "settings": {
-                "CLOSESPIDER_TIMEOUT": "120",
+                "CLOSESPIDER_TIMEOUT": "360",
                 "LOG_LEVEL": "INFO"
               },
               "user_agent_type": "'"$USER_AGENT_TYPE"'",
-              "auth_enabled": "false",
+              "auth_enabled": "true",
               "username": "admin",
               "password": "admin"
             }'
@@ -190,7 +190,7 @@ for i in $(seq 1 $JOB_COUNT); do
               "_version": "'"$VERSION"'",
               "jobid": "'"$jobid"'",
               "settings": {
-                "CLOSESPIDER_TIMEOUT": "120",
+                "CLOSESPIDER_TIMEOUT": "360",
                 "LOG_LEVEL": "INFO"
               },
               "user_agent": "'"$USER_AGENT"'",
@@ -207,7 +207,7 @@ for i in $(seq 1 $JOB_COUNT); do
               "_version": "'"$VERSION"'",
               "jobid": "'"$jobid"'",
               "settings": {
-                "CLOSESPIDER_TIMEOUT": "120",
+                "CLOSESPIDER_TIMEOUT": "360",
                 "LOG_LEVEL": "INFO"
               },
               "user_agent_type": "'"$USER_AGENT_TYPE"'",

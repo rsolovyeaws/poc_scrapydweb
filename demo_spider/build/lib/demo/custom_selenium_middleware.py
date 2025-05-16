@@ -5,6 +5,8 @@ import queue
 import time
 import random
 import threading
+import logging
+import traceback
 from urllib.parse import urlparse
 from scrapy import signals
 from scrapy.exceptions import IgnoreRequest, NotConfigured
@@ -20,6 +22,9 @@ from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
+from selenium.webdriver.remote.remote_connection import RemoteConnection
+from selenium.webdriver.remote.webdriver import WebDriver
+from threading import Semaphore
 
 # ───────── helpers ─────────────────────────────────────────────────────────
 def _inject_cookies(driver, cookies, domain, log):
@@ -337,6 +342,22 @@ class SeleniumMiddleware:
             # Store driver in spider for access in callbacks
             spider.set_selenium_driver(driver)
             
+            # Apply cookies if they're in the request meta (from Redis)
+            cookies = request.meta.get('cookies', [])
+            if cookies:
+                spider.logger.info(f"Applying {len(cookies)} cookies from Redis to Selenium session")
+                # Go to the domain first to set cookies
+                parsed_url = urlparse(request.url)
+                domain_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+                driver.get(domain_url)
+                
+                # Add each cookie to the driver
+                for cookie in cookies:
+                    try:
+                        driver.add_cookie(cookie)
+                    except Exception as e:
+                        spider.logger.warning(f"Failed to add cookie: {e}")
+                        
             # Log navigation
             spider.logger.debug(f"Selenium navigating to {request.url}")
             
