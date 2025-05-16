@@ -466,12 +466,30 @@ API Gateway: http://localhost:5001
 1. Откройте [Kibana](http://localhost:5601)
 2. При первом входе необходимо настроить индекс:
    - Перейдите в Management > Stack Management > Index Patterns
-   - Создайте индекс с шаблоном `filebeat-*`
-   - Выберите `@timestamp` в качестве поля времени
+   - Нажмите "Create index pattern"
+   - Введите `filebeat-*` в поле "Index pattern name"
+   - Нажмите "Next step"
+   - Выберите `@timestamp` в качестве поля времени (Time field)
+   - Нажмите "Create index pattern"
 3. Для просмотра логов перейдите в Analytics > Discover
 4. Используйте фильтры для поиска логов конкретного сервиса или паука:
    - `container.name: scrapyd1` - логи первого инстанса Scrapyd
-   - `spider_name: example` - логи конкретного паука
+   - `container.name: scrapyd2` - логи второго инстанса Scrapyd
+   - `log_type: spider_logs` - логи спайдеров
+   - `spider_name: quotes_spa` - логи конкретного паука
+   - `message: *job_id*` - поиск по ID задания
+
+#### Поиск логов завершенных заданий:
+
+Для поиска логов определенного задания, выполните следующие шаги:
+
+1. Откройте Discover в Kibana
+2. В поле запроса (KQL) введите:
+   ```
+   container.name: (scrapyd1 or scrapyd2) and message: "*имя_паука*" and message: "*job_id*"
+   ```
+3. Настройте временной диапазон в правом верхнем углу, чтобы охватить период работы паука
+4. Для улучшения читаемости логов, вы можете добавить поля `message` и `log.file.path` в список отображаемых полей
 
 ### Система мониторинга метрик
 

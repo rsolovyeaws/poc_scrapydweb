@@ -17,3 +17,6 @@ node_modules/
 .cursor/rules
 
 # test
+
+# Spider logs
+spider_logs/
