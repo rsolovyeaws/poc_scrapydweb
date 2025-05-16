@@ -11,6 +11,12 @@
                 "hide": true,
                 "iconColor": "rgba(0, 211, 255, 1)",
                 "name": "Annotations & Alerts",
+                "target": {
+                    "limit": 100,
+                    "matchAny": false,
+                    "tags": [],
+                    "type": "dashboard"
+                },
                 "type": "dashboard"
             }
         ]
@@ -76,7 +82,7 @@
                             }
                         ]
                     },
-                    "unit": "percent"
+                    "unit": "percentunit"
                 },
                 "overrides": []
             },
@@ -99,6 +105,7 @@
                     "sort": "none"
                 }
             },
+            "pluginVersion": "10.0.0",
             "targets": [
                 {
                     "datasource": {
@@ -106,7 +113,7 @@
                         "uid": "PBFA97CFB590B2093"
                     },
                     "editorMode": "code",
-                    "expr": "scrapyd_cpu_usage_percent",
+                    "expr": "scrapyd_cpu_usage_percent/100",
                     "instant": false,
                     "legendFormat": "{{instance}}",
                     "range": true,
@@ -193,6 +200,7 @@
                     "sort": "none"
                 }
             },
+            "pluginVersion": "10.0.0",
             "targets": [
                 {
                     "datasource": {
@@ -448,8 +456,8 @@
         },
         {
             "datasource": {
-                "type": "elasticsearch",
-                "uid": "elasticsearch"
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
             },
             "fieldConfig": {
                 "defaults": {
@@ -479,7 +487,20 @@
                         ]
                     }
                 },
-                "overrides": []
+                "overrides": [
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "content"
+                        },
+                        "properties": [
+                            {
+                                "id": "custom.width",
+                                "value": 600
+                            }
+                        ]
+                    }
+                ]
             },
             "gridPos": {
                 "h": 8,
@@ -501,7 +522,48 @@
                 "showHeader": true
             },
             "pluginVersion": "10.0.0",
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "PBFA97CFB590B2093"
+                    },
+                    "editorMode": "code",
+                    "expr": "scrapyd_log_entry",
+                    "format": "table",
+                    "instant": true,
+                    "range": false,
+                    "refId": "A"
+                }
+            ],
             "title": "Recent Logs",
+            "transformations": [
+                {
+                    "id": "organize",
+                    "options": {
+                        "excludeByName": {
+                            "Time": true,
+                            "Value": true,
+                            "__name__": true,
+                            "instance": true,
+                            "job": true
+                        },
+                        "indexByName": {
+                            "Time": 0,
+                            "Value": 6,
+                            "__name__": 1,
+                            "content": 5,
+                            "filename": 3,
+                            "instance": 7,
+                            "job": 8,
+                            "project": 2,
+                            "spider": 4,
+                            "timestamp": 9
+                        },
+                        "renameByName": {}
+                    }
+                }
+            ],
             "type": "table"
         }
     ],
