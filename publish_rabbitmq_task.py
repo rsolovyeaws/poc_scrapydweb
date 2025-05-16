@@ -5,7 +5,7 @@ import uuid
 import datetime
 import argparse
 
-def publish_task(host, port, username, password, queue, params):
+def publish_task(host, port, username, password, queue, params, use_proxy_rotation=False):
     """Publish a spider task to RabbitMQ with the same parameters as schedule_egg.sh"""
     
     # Generate a task ID if not provided
@@ -19,7 +19,7 @@ def publish_task(host, port, username, password, queue, params):
         if key.startswith("setting="):
             setting_name = key[8:]  # Remove "setting=" prefix
             settings[setting_name] = value
-        elif not key in ["project", "spider", "_version", "jobid", "user_agent_type"]:
+        elif not key in ["project", "spider", "_version", "jobid", "user_agent_type", "user_agent"]:
             args[key] = value
     
     # Create the task payload
@@ -35,9 +35,25 @@ def publish_task(host, port, username, password, queue, params):
         "auth_enabled": params.get("auth_enabled", "false") == "true",
         "username": params.get("username"),
         "password": params.get("password"),
-        "proxy": params.get("proxy"),
-        "user_agent_type": params.get("user_agent_type", "desktop")
     }
+    
+    # Add user agent parameters - make sure they're direct parameters, not in args
+    if "user_agent" in params:
+        task["user_agent"] = params.get("user_agent")
+    elif "user_agent_type" in params:
+        task["user_agent_type"] = params.get("user_agent_type", "desktop")
+    
+    # Only add proxy field if not using rotation
+    if not use_proxy_rotation and "proxy" in params:
+        task["proxy"] = params.get("proxy")
+        
+    # Display message about proxy mode
+    if use_proxy_rotation:
+        print(f"Using proxy rotation for task {task_id}")
+    elif "proxy" in params:
+        print(f"Using fixed proxy for task {task_id}: {params.get('proxy')}")
+    else:
+        print(f"No proxy specified for task {task_id}")
     
     # Convert to JSON
     message = json.dumps(task)
@@ -74,7 +90,21 @@ def publish_task(host, port, username, password, queue, params):
         
         print(f"Published task {task_id} to {queue}")
         print(f"Project: {params.get('project')}, Spider: {params.get('spider')}")
-        print(f"User-Agent Type: {params.get('user_agent_type', 'desktop')}")
+        
+        # Display user-agent information
+        if "user_agent" in params:
+            print(f"User-Agent: {params.get('user_agent')} (custom)")
+        else:
+            print(f"User-Agent Type: {params.get('user_agent_type', 'desktop')} (rotation)")
+        
+        # Display proxy information
+        if use_proxy_rotation:
+            print("Proxy: Автоматическая ротация")
+        elif "proxy" in params:
+            print(f"Proxy: {params.get('proxy')} (фиксированный)")
+        else:
+            print("Proxy: Не указан")
+            
         print(f"Settings: {json.dumps(settings, indent=2)}")
         print(f"Arguments: {json.dumps(args, indent=2)}")
         
@@ -101,7 +131,7 @@ if __name__ == "__main__":
         "auth_enabled": "true",
         "username": "admin",
         "password": "admin",
-        "proxy": "http://tinyproxy:8888",
+        "proxy": "http://tinyproxy1:8888",
         "user_agent_type": "desktop"  # Default user agent type
     }
     
@@ -124,12 +154,21 @@ if __name__ == "__main__":
     parser.add_argument("--auth", action="store_true", help="Enable authentication")
     parser.add_argument("--username", help="Auth username")
     parser.add_argument("--password", help="Auth password")
-    parser.add_argument("--proxy", help="Proxy URL")
+    
+    # Proxy rotation options
+    parser.add_argument("--use-proxy-rotation", action="store_true", 
+                        help="Use automatic proxy rotation (overrides --proxy)")
+    parser.add_argument("--no-proxy-rotation", action="store_true", 
+                        help="Don't use proxy rotation (use fixed proxy if specified)")
+    parser.add_argument("--proxy", 
+                        help="Proxy URL (used only if --use-proxy-rotation is not set)")
     
     # New parameters
     parser.add_argument("--count", type=int, default=1, help="Number of spider tasks to send (default: 1)")
     parser.add_argument("--user-agent-type", default="desktop", choices=["desktop", "mobile", "tablet"], 
                         help="Type of User-Agent to use (default: desktop)")
+    parser.add_argument("--user-agent", 
+                        help="Specify a custom User-Agent string (overrides --user-agent-type)")
     
     args = parser.parse_args()
     
@@ -148,6 +187,10 @@ if __name__ == "__main__":
     
     # Set user agent type
     params["user_agent_type"] = args.user_agent_type
+    
+    # Set custom user-agent if specified
+    if args.user_agent:
+        params["user_agent"] = args.user_agent
         
     # Process settings
     if args.setting:
@@ -168,8 +211,20 @@ if __name__ == "__main__":
         params["username"] = args.username
     if args.password:
         params["password"] = args.password
-    if args.proxy:
+    
+    # Handle proxy configuration
+    use_proxy_rotation = args.use_proxy_rotation
+    
+    # --no-proxy-rotation overrides --use-proxy-rotation
+    if args.no_proxy_rotation:
+        use_proxy_rotation = False
+    
+    # Set proxy if specified and not using rotation
+    if args.proxy and not use_proxy_rotation:
         params["proxy"] = args.proxy
+    elif use_proxy_rotation and "proxy" in params:
+        # Remove proxy parameter completely when using rotation
+        del params["proxy"]
     
     # Generate a base timestamp for all jobs
     base_timestamp = datetime.datetime.now().strftime("%Y-%m-%dT%H_%M_%S")
@@ -189,7 +244,8 @@ if __name__ == "__main__":
             username=args.rmq_user,
             password=args.rmq_password,
             queue=args.queue,
-            params=current_params
+            params=current_params,
+            use_proxy_rotation=use_proxy_rotation
         )
         
         if success:

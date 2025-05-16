@@ -3,3 +3,4 @@ pika==1.3.2
 
 # Other tools that might be useful
 requests==2.31.0 
+httpx

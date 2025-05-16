@@ -19,12 +19,22 @@ echo "✅ API Gateway is running"
 # Get the status of Scrapyd instances
 echo -e "\nScrapyd Instances Status:"
 curl -s ${API_URL}/status | jq -r '
-    . as $data | 
-    keys[] as $key | 
-    if $data[$key].status == "online" then
-        "✅ " + $key + ": " + $data[$key].status + " (running: " + ($data[$key].running | tostring) + ", pending: " + ($data[$key].pending | tostring) + ")"
+    .scrapyd | to_entries[] | 
+    if .value.status == "online" then
+        "✅ " + .key + ": " + .value.status + " (running: " + (.value.running | tostring) + ", pending: " + (.value.pending | tostring) + ")"
     else
-        "❌ " + $key + ": " + $data[$key].status
+        "❌ " + .key + ": " + .value.status
+    end
+'
+
+# Get the status of Selenium
+echo -e "\nSelenium Status:"
+curl -s ${API_URL}/status | jq -r '
+    .selenium | 
+    if .status == "online" then
+        "✅ Selenium: online (active sessions: " + (.active_sessions | tostring) + "/" + (.max_sessions | tostring) + ", queued: " + (.queued_jobs | tostring) + ")"
+    else
+        "❌ Selenium: " + (.status // "offline")
     end
 '
 

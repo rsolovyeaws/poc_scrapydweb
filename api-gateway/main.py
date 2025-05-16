@@ -25,6 +25,17 @@ SELENIUM_ACTIVE_KEY = "selenium:active_sessions"
 SELENIUM_LOCK_KEY = "selenium:lock"
 SELENIUM_QUEUE_CHECK_INTERVAL = 1  # seconds
 
+# Proxy configuration
+PROXY_ROTATION_ENABLED = os.getenv("PROXY_ROTATION_ENABLED", "true").lower() == "true"
+PROXY_SERVICE_URL = os.getenv("PROXY_SERVICE_URL", "http://proxy-rotator:5000")
+DEFAULT_PROXY = os.getenv("DEFAULT_PROXY", "http://tinyproxy1:8888")
+
+# Debug log proxy configuration
+print(f"DEBUG: Proxy configuration: ROTATION_ENABLED={PROXY_ROTATION_ENABLED}, SERVICE_URL={PROXY_SERVICE_URL}, DEFAULT_PROXY={DEFAULT_PROXY}")
+
+# User-Agent configuration
+USER_AGENT_SERVICE_URL = os.getenv("USER_AGENT_SERVICE_URL", "http://ua-rotator:5000")
+
 # Connect to Redis
 redis_client = redis.Redis(
     host=os.getenv("REDIS_HOST", "redis"),
@@ -44,6 +55,8 @@ class SpiderRequest(BaseModel):
     username: Optional[str] = None
     password: Optional[str] = None
     proxy: Optional[str] = None
+    user_agent_type: Optional[str] = None
+    user_agent: Optional[str] = None
     kwargs: Optional[Dict[str, Any]] = {}
 
 class SpiderResponse(BaseModel):
@@ -121,6 +134,25 @@ async def get_selenium_status():
         "available_sessions": max(0, MAX_SELENIUM_SESSIONS - active_sessions),
         "queued_jobs": queued_jobs
     }
+
+async def get_proxy():
+    """Get a proxy from the proxy rotation service"""
+    if not PROXY_ROTATION_ENABLED:
+        return DEFAULT_PROXY
+        
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{PROXY_SERVICE_URL}/proxy", timeout=2.0)
+            if response.status_code == 200:
+                data = response.json()
+                proxy = data.get("proxy")
+                if proxy:
+                    return proxy
+    except Exception as e:
+        print(f"Error getting proxy from rotation service: {str(e)}")
+            
+    # Fallback to default proxy
+    return DEFAULT_PROXY
 
 def acquire_selenium_session(job_details):
     """Try to acquire a Selenium session or queue job"""
@@ -244,6 +276,9 @@ async def reset_selenium():
 async def schedule_spider(request: SpiderRequest, background_tasks: BackgroundTasks):
     """Schedule a spider on the best available Scrapyd instance with Selenium resource management"""
     try:
+        # Debug log the exact request parameters
+        print(f"DEBUG: Received schedule request with parameters: {request}")
+        
         # Check if Selenium counter is stuck (all active but no actual running jobs)
         statuses = await get_server_status()
         selenium_status = await get_selenium_status()
@@ -286,9 +321,26 @@ async def schedule_spider(request: SpiderRequest, background_tasks: BackgroundTa
             
         if request.password:
             data["password"] = request.password
-            
+        
+        # Handle proxy settings
         if request.proxy:
+            # Use explicitly specified proxy
             data["proxy"] = request.proxy
+        elif PROXY_ROTATION_ENABLED:
+            # Get a proxy from the rotation service
+            proxy = await get_proxy()
+            data["proxy"] = proxy
+            print(f"Using rotated proxy: {proxy}")
+        
+        # Handle user agent settings
+        if request.user_agent:
+            # Use explicitly specified user agent
+            data["user_agent"] = request.user_agent
+            print(f"Using specified User-Agent: {request.user_agent}")
+        elif request.user_agent_type:
+            # Use user agent type for rotation
+            data["user_agent_type"] = request.user_agent_type
+            print(f"Using User-Agent rotation type: {request.user_agent_type}")
             
         # Add settings as JSON
         if request.settings:
@@ -298,6 +350,9 @@ async def schedule_spider(request: SpiderRequest, background_tasks: BackgroundTa
         if request.kwargs:
             for k, v in request.kwargs.items():
                 data[k] = v
+        
+        # Debug log the actual data being sent to Scrapyd
+        print(f"DEBUG: Data being sent to Scrapyd: {data}")
         
         # Check selenium resource utilization
         selenium_status = await get_selenium_status()

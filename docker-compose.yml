@@ -56,13 +56,24 @@ services:
       - scraper-network
     environment:
       - SE_NODE_MAX_SESSIONS=4
-      - SE_NODE_SESSION_TIMEOUT=300
+      - SE_NODE_SESSION_TIMEOUT=600
       - SE_NODE_OVERRIDE_MAX_SESSIONS=true
-      - SE_OPTS=--session-request-timeout 300
-      - SE_GRID_MAX_HEAP=1024m
+      - SE_OPTS=--session-request-timeout 600 --session-retry-interval 2000
+      - SE_GRID_MAX_HEAP=2048m
+      - GRID_TIMEOUT=600
+      - JAVA_OPTS=-Xmx2g
+      # Browser shutdown settings to prevent premature session termination
+      - DBUS_SESSION_BUS_ADDRESS=/dev/null
     volumes:
       - ./data/cookies:/data/cookies # Volume for persistent cookies
+      - /dev/shm:/dev/shm # Improved shared memory for Chrome stability
     shm_size: 4gb
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:4444/wd/hub/status" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     deploy:
       resources:
         limits:
@@ -131,12 +142,17 @@ services:
       - scrapyd2
       - redis
       - selenium-hub
+      - proxy-rotator
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_DB=0
       - MAX_SELENIUM_SESSIONS=4
       - SELENIUM_HUB_URL=http://selenium-hub:4444
+      - PROXY_ROTATION_ENABLED=true
+      - PROXY_SERVICE_URL=http://proxy-rotator:5000
+      - DEFAULT_PROXY=http://tinyproxy1:8888
+      - USER_AGENT_SERVICE_URL=http://ua-rotator:5000
     networks:
       - scraper-network
     healthcheck:
@@ -147,11 +163,20 @@ services:
     restart: unless-stopped
 
   # ───────────────────────────────────────
-  tinyproxy:
+  tinyproxy1:
     image: dannydirect/tinyproxy:latest
-    container_name: tinyproxy
+    container_name: tinyproxy1
     ports:
       - "8888:8888"
+    command: [ "ANY" ] # This allows unrestricted access (for testing)
+    networks:
+      - scraper-network
+
+  tinyproxy2:
+    image: dannydirect/tinyproxy:latest
+    container_name: tinyproxy2
+    ports:
+      - "8889:8888" # Different external port
     command: [ "ANY" ] # This allows unrestricted access (for testing)
     networks:
       - scraper-network
@@ -465,6 +490,29 @@ services:
     networks:
       - scraper-network
 
+  # Proxy rotation service
+  proxy-rotator:
+    build:
+      context: ./proxy-rotator
+      dockerfile: Dockerfile
+    container_name: proxy-rotator
+    ports:
+      - "5003:5000"
+    volumes:
+      - proxy-rotator-data:/data
+    environment:
+      - PORT=5000
+      - HOST=0.0.0.0
+      - DATA_DIR=/data
+      - DEBUG=false
+      - PROXIES=http://tinyproxy1:8888,http://tinyproxy2:8888
+    restart: unless-stopped
+    networks:
+      - scraper-network
+    depends_on:
+      - tinyproxy1
+      - tinyproxy2
+
 networks:
   scraper-network:
     driver: bridge
@@ -492,4 +540,6 @@ volumes:
     driver: local
   # Add the volume for ua-rotator data persistence
   ua-rotator-data:
+    driver: local
+  proxy-rotator-data:
     driver: local
