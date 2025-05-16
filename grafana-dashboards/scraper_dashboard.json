@@ -25,7 +25,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus"
+                "uid": "PBFA97CFB590B2093"
             },
             "fieldConfig": {
                 "defaults": {
@@ -99,13 +99,27 @@
                     "sort": "none"
                 }
             },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "PBFA97CFB590B2093"
+                    },
+                    "editorMode": "code",
+                    "expr": "scrapyd_cpu_usage_percent",
+                    "instant": false,
+                    "legendFormat": "{{instance}}",
+                    "range": true,
+                    "refId": "A"
+                }
+            ],
             "title": "CPU Usage",
             "type": "timeseries"
         },
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus"
+                "uid": "PBFA97CFB590B2093"
             },
             "fieldConfig": {
                 "defaults": {
@@ -179,13 +193,27 @@
                     "sort": "none"
                 }
             },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "PBFA97CFB590B2093"
+                    },
+                    "editorMode": "code",
+                    "expr": "scrapyd_memory_usage_bytes",
+                    "instant": false,
+                    "legendFormat": "{{instance}}",
+                    "range": true,
+                    "refId": "A"
+                }
+            ],
             "title": "Memory Usage",
             "type": "timeseries"
         },
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus"
+                "uid": "PBFA97CFB590B2093"
             },
             "fieldConfig": {
                 "defaults": {
@@ -229,13 +257,27 @@
                 "showThresholdMarkers": true
             },
             "pluginVersion": "10.0.0",
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "PBFA97CFB590B2093"
+                    },
+                    "editorMode": "code",
+                    "expr": "sum(scrapyd_running_jobs)",
+                    "instant": false,
+                    "legendFormat": "Running Jobs",
+                    "range": true,
+                    "refId": "A"
+                }
+            ],
             "title": "Active Spiders",
             "type": "gauge"
         },
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus"
+                "uid": "PBFA97CFB590B2093"
             },
             "fieldConfig": {
                 "defaults": {
@@ -308,13 +350,27 @@
                     "sort": "none"
                 }
             },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "PBFA97CFB590B2093"
+                    },
+                    "editorMode": "code",
+                    "expr": "rate(scrapyd_finished_jobs_total[5m])",
+                    "instant": false,
+                    "legendFormat": "{{project}}-{{spider}}",
+                    "range": true,
+                    "refId": "A"
+                }
+            ],
             "title": "Requests Rate",
             "type": "timeseries"
         },
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus"
+                "uid": "PBFA97CFB590B2093"
             },
             "fieldConfig": {
                 "defaults": {
@@ -360,6 +416,33 @@
                 "textMode": "auto"
             },
             "pluginVersion": "10.0.0",
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "PBFA97CFB590B2093"
+                    },
+                    "editorMode": "code",
+                    "expr": "scrapyd_up",
+                    "instant": false,
+                    "legendFormat": "Scrapyd Status ({{instance}})",
+                    "range": true,
+                    "refId": "A"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "PBFA97CFB590B2093"
+                    },
+                    "editorMode": "code",
+                    "expr": "sum(scrapyd_pending_jobs)",
+                    "hide": false,
+                    "instant": false,
+                    "legendFormat": "Pending Jobs",
+                    "range": true,
+                    "refId": "B"
+                }
+            ],
             "title": "System Stats",
             "type": "stat"
         },

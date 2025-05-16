@@ -8,9 +8,11 @@ services:
       - SCRAPYD_EGGS_DIR=/root/.scrapyd/eggs
     ports:
       - "6800:6800"
+      - "9410:9410"
     volumes:
       - ./shared-eggs:/root/.scrapyd/eggs
       - ./deploy_eggs.sh:/deploy_eggs.sh
+      - ./scrapyd_exporter.py:/app/scrapyd_exporter.py
       - ./data/cookies:/data/cookies # Volume for persistent cookies
     entrypoint: /deploy_eggs.sh
     networks:
@@ -25,9 +27,11 @@ services:
       - SCRAPYD_EGGS_DIR=/root/.scrapyd/eggs
     ports:
       - "6801:6800"
+      - "9411:9410"
     volumes:
       - ./shared-eggs:/root/.scrapyd/eggs
       - ./deploy_eggs.sh:/deploy_eggs.sh
+      - ./scrapyd_exporter.py:/app/scrapyd_exporter.py
       - ./data/cookies:/data/cookies # Volume for persistent cookies
     entrypoint: /deploy_eggs.sh
     networks:

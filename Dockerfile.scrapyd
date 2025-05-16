@@ -20,7 +20,9 @@ RUN pip install --no-cache-dir --break-system-packages \
     boto3 \
     botocore \
     redis==5.0.1 \
-    requests==2.31.0
+    requests==2.31.0 \
+    prometheus_client==0.17.1 \
+    scrapy-prometheus-exporter
 
 # Install scrapydweb with logparser
 RUN pip install --break-system-packages scrapydweb[logparser]
@@ -28,9 +30,15 @@ RUN pip install --break-system-packages scrapydweb[logparser]
 # Create directory for custom code
 RUN mkdir -p /app/custom_middleware
 
+# Copy metrics middleware for Scrapy
+COPY metrics_middleware.py /app/custom_middleware/
+
 # Create shared eggs dir and set permissions
 # RUN mkdir -p /root/.scrapyd/eggs && \
 #    chown -R scrapyd:scrapyd /root/.scrapyd
 
 # Set working directory
 WORKDIR /app
+
+# Expose metrics port
+EXPOSE 9410
