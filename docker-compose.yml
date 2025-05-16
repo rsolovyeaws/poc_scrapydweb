@@ -56,13 +56,24 @@ services:
       - scraper-network
     environment:
       - SE_NODE_MAX_SESSIONS=4
-      - SE_NODE_SESSION_TIMEOUT=300
+      - SE_NODE_SESSION_TIMEOUT=600
       - SE_NODE_OVERRIDE_MAX_SESSIONS=true
-      - SE_OPTS=--session-request-timeout 300
-      - SE_GRID_MAX_HEAP=1024m
+      - SE_OPTS=--session-request-timeout 600 --session-retry-interval 2000
+      - SE_GRID_MAX_HEAP=2048m
+      - GRID_TIMEOUT=600
+      - JAVA_OPTS=-Xmx2g
+      # Browser shutdown settings to prevent premature session termination
+      - DBUS_SESSION_BUS_ADDRESS=/dev/null
     volumes:
       - ./data/cookies:/data/cookies # Volume for persistent cookies
+      - /dev/shm:/dev/shm # Improved shared memory for Chrome stability
     shm_size: 4gb
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:4444/wd/hub/status" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     deploy:
       resources:
         limits:

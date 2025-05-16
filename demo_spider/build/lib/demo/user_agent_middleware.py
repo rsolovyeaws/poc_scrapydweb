@@ -59,18 +59,24 @@ class UserAgentRotationMiddleware:
         response = requests.get(urljoin(self.ua_service_url, '/health'))
         response.raise_for_status()
         
-        # Get available user agents
-        response = requests.get(urljoin(self.ua_service_url, '/user-agents/desktop'))
+        # Get all available user agents
+        response = requests.get(urljoin(self.ua_service_url, '/api/user-agents'))
         response.raise_for_status()
-        self.available_user_agents['desktop'] = response.json()
         
-        response = requests.get(urljoin(self.ua_service_url, '/user-agents/mobile'))
-        response.raise_for_status()
-        self.available_user_agents['mobile'] = response.json()
-        
-        response = requests.get(urljoin(self.ua_service_url, '/user-agents/tablet'))
-        response.raise_for_status()
-        self.available_user_agents['tablet'] = response.json()
+        # Extract user agents by device type
+        ua_data = response.json()
+        if ua_data:
+            self.available_user_agents = {
+                'desktop': [],
+                'mobile': [],
+                'tablet': []
+            }
+            
+            # Flatten the structure to match our expected format
+            for device_type, browsers in ua_data.items():
+                if device_type in self.available_user_agents:
+                    for browser_agents in browsers.values():
+                        self.available_user_agents[device_type].extend(browser_agents)
     
     def get_random_ua(self, ua_type='desktop'):
         """Get a random User-Agent from the specified category"""
@@ -82,7 +88,7 @@ class UserAgentRotationMiddleware:
                 return random.choice(self.available_user_agents[ua_type])
             
             # Request a random User-Agent from the service
-            response = requests.get(urljoin(self.ua_service_url, f'/user-agents/{ua_type}/random'))
+            response = requests.get(urljoin(self.ua_service_url, f'/api/user-agent?type={ua_type}'))
             response.raise_for_status()
             return response.json().get('user_agent', random.choice(self.fallback_user_agents))
         except Exception as e:

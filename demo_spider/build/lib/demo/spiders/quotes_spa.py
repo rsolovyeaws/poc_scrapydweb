@@ -23,10 +23,12 @@ class QuotesSpaSpider(scrapy.Spider):
         "DOWNLOADER_MIDDLEWARES": {
             # Disable default user-agent middleware
             "scrapy.downloadermiddlewares.useragent.UserAgentMiddleware": None,
-            # Ensure our User-Agent middleware is used
-            "demo.user_agent_middleware.UserAgentRotationMiddleware": 750,
-            "demo.custom_selenium_middleware.SeleniumMiddleware": 800,
-            "demo.redis_cookies_middleware.RedisCookiesMiddleware": 900,
+            # Ensure our User-Agent middleware
+            "demo.user_agent_middleware.UserAgentRotationMiddleware": 543,
+            # Custom Selenium middleware
+            "demo.custom_selenium_middleware.SeleniumMiddleware": 750,
+            # Redis cookies middleware
+            "demo.redis_cookies_middleware.RedisCookiesMiddleware": 751,
         },
         # pipelines
         "ITEM_PIPELINES": {
@@ -45,84 +47,86 @@ class QuotesSpaSpider(scrapy.Spider):
         "USER_AGENT_ROTATION_ENABLED": True,
         # Use DEBUG level for more verbose logging
         "LOG_LEVEL": "DEBUG",
-        # misc
-        "CONCURRENT_REQUESTS": 3,
-        "CLOSESPIDER_PAGECOUNT": 0,
+        # Selenium related timeouts
+        "SELENIUM_PAGE_LOAD_TIMEOUT": 60,
+        "SELENIUM_IMPLICIT_WAIT": 10,
+        "SELENIUM_WAIT_TIME": 30,
+        # Default credentials (can be overridden with spider args)
+        "DEFAULT_USERNAME": "admin",
+        "DEFAULT_PASSWORD": "admin",
     }
     # ─── ctor ────────────────────────────────────────────────────────────
-    def __init__(self, username=None, password=None, auth_enabled="true", proxy=None, user_agent_type=None, user_agent=None, *a, **kw):
-        super().__init__(*a, **kw)
-        self.username = username or "admin"
-        self.password = password or "admin"
-        self.auth_enabled = str(auth_enabled).lower() != "false"
-        self.proxy = proxy  # Store proxy parameter
+    def __init__(self, *args, **kwargs):
+        super(QuotesSpaSpider, self).__init__(*args, **kwargs)
+        
+        # Initialize tracking dictionaries
+        self.user_agents_used = {}
+        self.proxies_used = {}  # Dictionary to track which proxies are used for which URLs
+        
+        # Initialize driver storage
+        self.driver = None
+        self.is_logged_in = False
+        
+        # Track login attempts
+        self.login_attempts = 0
+        self.max_login_attempts = 3
+        
+        # Initialize cookies
+        self.cookies = []
+        self.spider_closed = False
+        
+        # Set credentials - use kwargs first, then custom_settings if available
+        self.username = kwargs.get('username') or self.custom_settings.get('DEFAULT_USERNAME', 'admin')
+        self.password = kwargs.get('password') or self.custom_settings.get('DEFAULT_PASSWORD', 'admin')
+        
+        # Authentication flag
+        self.auth_enabled = kwargs.get('auth_enabled', 'false').lower() == 'true'
+        
+        # Set proxy from spider arguments
+        self.proxy = kwargs.get('proxy')
         if self.proxy:
             self.logger.info(f"Proxy configured: {self.proxy}")
         
-        # Debug log all parameters
-        self.logger.info(f"Spider initialized with params: {a}, {kw}")
+        # Set user agent type and custom user agent
+        self.user_agent_type = kwargs.get('user_agent_type', 'desktop')
+        self.user_agent = kwargs.get('user_agent')
         
-        # Store user agent parameters
-        self.user_agent = user_agent
-        if self.user_agent:
-            self.logger.info(f"Custom User-Agent configured: {self.user_agent}")
+        # Log authentication settings
+        if self.auth_enabled:
+            self.logger.info(f"Authentication enabled: {self.auth_enabled}")
         
-        # Only use user_agent_type if no direct user_agent is specified
-        self.user_agent_type = None if self.user_agent else user_agent_type
-        if self.user_agent_type:
-            self.logger.info(f"User-Agent type configured: {self.user_agent_type}")
-        
-        self.cookies, self.selenium_driver = [], None
-        self.is_logged_in = False
-        self.current_url = self.start_urls[0]  # Initialize with start URL
-        
-        # Dictionary to track proxies used for each URL
-        self.proxies_used = {}
-        
-        # Dictionary to track User-Agents used for each URL (populated by UserAgentRotationMiddleware)
-        self.user_agents_used = {}
+        self.logger.info(f"Spider initialized with params: {args}, {kwargs}")
     
     # set by middleware
     def set_selenium_driver(self, driver):
-        self.selenium_driver = driver
+        self.driver = driver
     
     # ─── entry point ─────────────────────────────────────────────────────
     def start_requests(self):
-        # Prepare meta with common settings
-        meta = {"selenium": True, "wait_time": 2}  # Increased wait time
-        
-        # Add proxy to meta if specified
-        if self.proxy:
-            meta['proxy'] = self.proxy  # For standard Scrapy proxy middleware
-            # Track this proxy for the start URL
-            self.proxies_used[self.start_urls[0]] = self.proxy
-        
-        # Add User-Agent type to meta if specified
-        if self.user_agent_type:
-            meta['user_agent_type'] = self.user_agent_type
-        
-        # Add custom User-Agent to meta if specified
-        if self.user_agent:
-            meta['user_agent'] = self.user_agent
-        
-        if self.auth_enabled:
+        """
+        Start with the login page if authentication is enabled
+        """
+        if getattr(self, 'auth_enabled', False):
             self.logger.info("Authentication enabled → hitting login page")
-            yield scrapy.Request(
+            return [scrapy.Request(
                 self.login_url,
-                self.perform_login,
-                meta=meta,
-                dont_filter=True,
-                errback=self.handle_error
-            )
+                callback=self.perform_login,
+                meta={
+                    "selenium": True,
+                    "wait_time": 10,
+                    # Make sure we keep the driver alive for the login process
+                    "custom_driver": False,
+                    "preserve_driver": True
+                },
+                dont_filter=True
+            )]
         else:
             self.logger.info("Authentication disabled → going straight to quotes")
-            yield scrapy.Request(
-                self.start_urls[0],
-                self.parse,
-                meta=meta,
-                dont_filter=True,
-                errback=self.handle_error
-            )
+            return [scrapy.Request(
+                url, 
+                callback=self.parse, 
+                meta={"selenium": True, "wait_time": 10}
+            ) for url in self.start_urls]
     
     # Error handling callback
     def handle_error(self, failure):
@@ -136,116 +140,190 @@ class QuotesSpaSpider(scrapy.Spider):
     
     # ─── login flow (only when auth_enabled) ─────────────────────────────
     def perform_login(self, response):
-        driver = response.meta.get("driver")
-        if not driver:
-            self.logger.error("No driver in response meta!")
-            return None
-            
-        self.logger.debug(f"Login with driver session ID: {getattr(driver, 'session_id', 'unknown')}")
-            
-        # cookies from previous run?
-        if self.cookies:
-            self.logger.debug(f"DEBUG: Found {len(self.cookies)} cookies: {self.cookies}")
-            try:
-                self.is_logged_in = self._is_logged_in(driver)
-                if self.is_logged_in:
-                    self.logger.info("Cookie jar already logged in")
-            except WebDriverException as e:
-                self.logger.error(f"Error checking login state: {e}")
-                self.is_logged_in = False
+        """Login to the website using Selenium"""
+        try:
+            # Get driver from response meta
+            driver = response.meta.get("driver")
+            if not driver:
+                self.logger.error("No driver in response meta. The driver was likely closed prematurely.")
+                self.logger.info("Creating a new driver for login attempt...")
                 
-        # else try form login
-        if not self.is_logged_in:
-            try:
-                # Wait for login form with increased timeout
-                self.logger.debug("Waiting for login form...")
-                WebDriverWait(driver, 5).until(
-                    EC.presence_of_element_located((By.ID, "username"))
+                # Fall back to regular browsing since we can't login
+                return scrapy.Request(
+                    self.start_urls[0], 
+                    callback=self.parse, 
+                    meta={"selenium": True, "wait_time": 10},
+                    dont_filter=True
                 )
-                
-                # Fill login form
-                self.logger.debug(f"DEBUG: Logging in with username={self.username}, password={self.password}")
-                driver.find_element(By.ID, "username").send_keys(self.username)
-                driver.find_element(By.ID, "password").send_keys(self.password)
-                
-                # Click submit and wait for page to change
-                self.logger.debug("Submitting login form...")
-                driver.find_element(By.CSS_SELECTOR, "input[type='submit']").click()
-                
-                # Wait for page to change with increased timeout
-                WebDriverWait(driver, 10).until(EC.url_changes(self.login_url))
-                
-                # Additional wait to allow page to load completely
-                time.sleep(2)
-                
-                # Check if login was successful
-                self.is_logged_in = self._is_logged_in(driver)
-                
-            except Exception as e:
-                self.logger.error(f"Login automation error: {e}")
-                self.is_logged_in = False
-        
-        # Get cookies from driver and save them immediately to ensure they're not lost
-        try:
-            self.cookies = driver.get_cookies()
-            self.logger.debug(f"DEBUG: After login, collected {len(self.cookies)} cookies: {self.cookies}")
-        except WebDriverException as e:
-            self.logger.error(f"Failed to get cookies: {e}")
-        
-        # Manually save cookies to Redis to ensure they're not lost when the driver closes
-        try:
-            if self.cookies and hasattr(self, 'crawler') and hasattr(self.crawler, 'engine'):
-                # Get the Redis middleware instance
-                for middleware in self.crawler.engine.downloader.middleware.middlewares:
-                    if hasattr(middleware, 'redis_client') and hasattr(middleware, '_get_key'):
-                        key = middleware._get_key(self)
-                        import json
-                        middleware.redis_client.set(key, json.dumps(self.cookies))
-                        self.logger.debug(f"DEBUG: Manually saved {len(self.cookies)} cookies to Redis with key {key}")
-                        break
-        except Exception as e:
-            self.logger.error(f"DEBUG: Failed to manually save cookies: {e}")
-        
-        # Prepare meta with common settings
-        meta = {"selenium": True, "wait_time": 2}
-        
-        # Add proxy to meta if specified
-        if self.proxy:
-            meta['proxy'] = self.proxy  # For standard Scrapy proxy middleware
-            # Track the proxy for this URL
-            self.proxies_used[self.start_urls[0]] = self.proxy
-        
-        # Add User-Agent type to meta if specified
-        if self.user_agent_type:
-            meta['user_agent_type'] = self.user_agent_type
             
-        # Add custom User-Agent to meta if specified
-        if self.user_agent:
-            meta['user_agent'] = self.user_agent
-        
-        yield scrapy.Request(
-            self.start_urls[0],
-            self.parse,
-            meta=meta,
-            dont_filter=True,
-            errback=self.handle_error
-        )
+            # Track login session ID for debugging
+            session_id = getattr(driver, 'session_id', 'unknown')
+            self.logger.info(f"Attempting login with Selenium session ID: {session_id}")
+            
+            # Verify the driver is still active by checking current URL
+            try:
+                current_url = driver.current_url
+                self.logger.debug(f"Driver is active at URL: {current_url}")
+            except Exception as e:
+                self.logger.error(f"Driver is no longer valid: {e}")
+                return scrapy.Request(
+                    self.start_urls[0], 
+                    callback=self.parse, 
+                    meta={"selenium": True, "wait_time": 10},
+                    dont_filter=True
+                )
+            
+            # Wait for login form with increased timeout
+            self.logger.debug("Waiting for login form...")
+            
+            # Wait for username field to be present with explicit retry loop
+            max_attempts = 3
+            for attempt in range(max_attempts):
+                try:
+                    username_field = WebDriverWait(driver, 10).until(
+                        EC.presence_of_element_located((By.ID, "username"))
+                    )
+                    # Clear the field first
+                    username_field.clear()
+                    time.sleep(0.5)  # Brief pause
+                    
+                    # Log credentials being used (masked password)
+                    masked_password = '*' * len(self.password) if self.password else None
+                    self.logger.info(f"Login attempt #{self.login_attempts+1}/{self.max_login_attempts} with username={self.username}, password={masked_password}")
+                    self.login_attempts += 1
+                    
+                    # Fill username with typing delay to mimic human behavior
+                    for char in self.username:
+                        username_field.send_keys(char)
+                        time.sleep(0.05)  # Small delay between characters
+                    
+                    # Get password field with wait
+                    password_field = WebDriverWait(driver, 5).until(
+                        EC.presence_of_element_located((By.ID, "password"))
+                    )
+                    password_field.clear()
+                    time.sleep(0.5)  # Brief pause
+                    
+                    # Type password with delay
+                    for char in self.password:
+                        password_field.send_keys(char)
+                        time.sleep(0.05)
+                    
+                    # Add pause before submitting
+                    time.sleep(1)
+                    
+                    # Click submit and wait for page to change
+                    self.logger.debug("Submitting login form...")
+                    submit_button = WebDriverWait(driver, 5).until(
+                        EC.element_to_be_clickable((By.CSS_SELECTOR, "input[type='submit']"))
+                    )
+                    submit_button.click()
+                    
+                    # Wait for page to change with increased timeout
+                    WebDriverWait(driver, 10).until(EC.url_changes(self.login_url))
+                    
+                    # Additional wait to allow page to load completely
+                    time.sleep(2)
+                    
+                    # Check if login was successful by looking for logout link
+                    try:
+                        logout_element = WebDriverWait(driver, 5).until(
+                            EC.presence_of_element_located((By.XPATH, "//a[contains(text(), 'Logout')]"))
+                        )
+                        self.is_logged_in = True
+                        self.logger.info("✅ Login successful!")
+                        
+                        # Save cookies after successful login
+                        self.cookies = driver.get_cookies()
+                        self.logger.debug(f"Saved {len(self.cookies)} cookies after login")
+                        
+                        # Success! Break out of retry loop
+                        break
+                        
+                    except Exception as e:
+                        self.logger.warning(f"❌ Login failed - could not find logout link: {e}")
+                        self.is_logged_in = False
+                        
+                        if attempt < max_attempts - 1:
+                            self.logger.info(f"Retrying login (attempt {attempt+2}/{max_attempts})...")
+                            # Refresh the page for next attempt
+                            driver.get(self.login_url)
+                            time.sleep(2)  # Wait for page to load
+                        
+                except Exception as e:
+                    self.logger.error(f"Login form interaction error on attempt {attempt+1}: {e}")
+                    if attempt < max_attempts - 1:
+                        self.logger.info(f"Retrying login (attempt {attempt+2}/{max_attempts})...")
+                        # Refresh the page for next attempt
+                        driver.get(self.login_url)
+                        time.sleep(2)  # Wait for page to load
+                    else:
+                        self.is_logged_in = False
+            
+            # Return to start URL for crawling
+            return scrapy.Request(
+                self.start_urls[0],
+                callback=self.parse,
+                meta={"selenium": True, "wait_time": 10},
+                dont_filter=True
+            )
+            
+        except Exception as e:
+            self.logger.error(f"Login process error: {e}")
+            # Fall back to non-authenticated browsing
+            return scrapy.Request(
+                self.start_urls[0],
+                callback=self.parse,
+                meta={"selenium": True, "wait_time": 10},
+                dont_filter=True
+            )
     
     def _is_logged_in(self, driver):
         """Check if user is logged in by looking for logout link"""
         try:
             self.logger.debug("DEBUG: Checking if logged in...")
             
+            # First ensure the page is loaded
+            WebDriverWait(driver, 10).until(
+                lambda d: d.execute_script("return document.readyState") == "complete"
+            )
+            
             # Verify the driver is still valid
             current_url = driver.current_url
             self.logger.debug(f"Current URL: {current_url}")
             
-            # Look for logout link with increased timeout
-            WebDriverWait(driver, 5).until(
-                EC.presence_of_element_located((By.XPATH, "//a[contains(@href,'/logout')]"))
-            )
-            self.logger.info("Login verified - found logout link")
-            return True
+            # Use different methods to check login status
+            
+            # Method 1: Look for logout link 
+            try:
+                logout_link = WebDriverWait(driver, 5).until(
+                    EC.presence_of_element_located((By.XPATH, "//a[contains(@href,'/logout')]"))
+                )
+                if logout_link:
+                    self.logger.info("Login verified ✅ - found logout link")
+                    return True
+            except (TimeoutException, NoSuchElementException):
+                self.logger.debug("No logout link found")
+            
+            # Method 2: Check URL patterns
+            if "login" not in current_url.lower() and "/js/" in current_url:
+                # Some sites redirect to main page after login
+                self.logger.info("Login possibly verified ✅ - not on login page")
+                return True
+                
+            # Method 3: Check page content for authenticated elements
+            try:
+                WebDriverWait(driver, 2).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, ".user-profile, .profile-link, .welcome-message"))
+                )
+                self.logger.info("Login verified ✅ - found user profile elements")
+                return True
+            except (TimeoutException, NoSuchElementException):
+                pass
+                
+            # If none of the above checks passed, assume not logged in
+            self.logger.warning("Not logged in ❌ - authentication checks failed")
+            return False
             
         except (TimeoutException, NoSuchElementException) as e:
             self.logger.warning(f"Not logged in: {e}")
