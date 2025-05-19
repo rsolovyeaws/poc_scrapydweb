@@ -1,0 +1,350 @@
+2025-05-16 17:56:55 [scrapy.utils.log] INFO: Scrapy 2.10.0 started (bot: demo)
+2025-05-16 17:56:55 [scrapy.utils.log] INFO: Versions: lxml 4.9.3.0, libxml2 2.10.3, cssselect 1.2.0, parsel 1.8.1, w3lib 2.0.0, Twisted 22.10.0, Python 3.11.2 (main, Nov 30 2024, 21:22:50) [GCC 12.2.0], pyOpenSSL 23.2.0 (OpenSSL 3.0.15 3 Sep 2024), cryptography 38.0.4, Platform Linux-5.15.167.4-microsoft-standard-WSL2-x86_64-with-glibc2.36
+2025-05-16 17:56:55 [scrapy.addons] INFO: Enabled addons:
+[]
+2025-05-16 17:56:55 [scrapy.crawler] INFO: Overridden settings:
+{'BOT_NAME': 'demo',
+ 'CLOSESPIDER_TIMEOUT': '180',
+ 'CONCURRENT_REQUESTS': 2,
+ 'CONCURRENT_REQUESTS_PER_DOMAIN': 2,
+ 'DOWNLOAD_DELAY': 1,
+ 'FEED_EXPORT_ENCODING': 'utf-8',
+ 'LOG_FILE': '/var/lib/scrapyd/logs/demo-1.0-py3.10/quotes_spa/test_final_fix4.log',
+ 'LOG_LEVEL': 'INFO',
+ 'NEWSPIDER_MODULE': 'demo.spiders',
+ 'SPIDER_MODULES': ['demo.spiders'],
+ 'TWISTED_REACTOR': 'twisted.internet.asyncioreactor.AsyncioSelectorReactor'}
+2025-05-16 17:56:55 [py.warnings] WARNING: /usr/local/lib/python3.11/dist-packages/scrapy/utils/request.py:248: ScrapyDeprecationWarning: '2.6' is a deprecated value for the 'REQUEST_FINGERPRINTER_IMPLEMENTATION' setting.
+
+It is also the default value. In other words, it is normal to get this warning if you have not defined a value for the 'REQUEST_FINGERPRINTER_IMPLEMENTATION' setting. This is so for backward compatibility reasons, but it will change in a future version of Scrapy.
+
+See the documentation of the 'REQUEST_FINGERPRINTER_IMPLEMENTATION' setting for information on how to handle this deprecation.
+  return cls(crawler)
+
+2025-05-16 17:56:55 [scrapy.extensions.telnet] INFO: Telnet Password: 95b6349744fc5d13
+2025-05-16 17:56:56 [scrapy.middleware] INFO: Enabled extensions:
+['scrapy.extensions.corestats.CoreStats',
+ 'scrapy.extensions.telnet.TelnetConsole',
+ 'scrapy.extensions.memusage.MemoryUsage',
+ 'scrapy.extensions.closespider.CloseSpider',
+ 'scrapy.extensions.feedexport.FeedExporter',
+ 'scrapy.extensions.logstats.LogStats']
+2025-05-16 17:56:56 [quotes_spa] INFO: Proxy configured: http://tinyproxy1:8888
+2025-05-16 17:56:56 [quotes_spa] INFO: Authentication enabled: True
+2025-05-16 17:56:56 [quotes_spa] INFO: Spider initialized with params: (), {'auth_enabled': 'true', 'username': 'admin', 'password': 'admin', 'proxy': 'http://tinyproxy1:8888', '_job': 'test_final_fix4'}
+2025-05-16 17:56:56 [demo.user_agent_middleware] INFO: Connected to User-Agent rotation service
+2025-05-16 17:56:56 [scrapy.middleware] INFO: Enabled downloader middlewares:
+['scrapy.downloadermiddlewares.httpauth.HttpAuthMiddleware',
+ 'scrapy.downloadermiddlewares.downloadtimeout.DownloadTimeoutMiddleware',
+ 'scrapy.downloadermiddlewares.defaultheaders.DefaultHeadersMiddleware',
+ 'demo.user_agent_middleware.UserAgentRotationMiddleware',
+ 'scrapy.downloadermiddlewares.retry.RetryMiddleware',
+ 'scrapy.downloadermiddlewares.redirect.MetaRefreshMiddleware',
+ 'scrapy.downloadermiddlewares.httpcompression.HttpCompressionMiddleware',
+ 'scrapy.downloadermiddlewares.redirect.RedirectMiddleware',
+ 'scrapy.downloadermiddlewares.cookies.CookiesMiddleware',
+ 'scrapy.downloadermiddlewares.httpproxy.HttpProxyMiddleware',
+ 'demo.custom_selenium_middleware.SeleniumMiddleware',
+ 'demo.redis_cookies_middleware.RedisCookiesMiddleware',
+ 'scrapy.downloadermiddlewares.stats.DownloaderStats']
+2025-05-16 17:56:56 [scrapy.middleware] INFO: Enabled spider middlewares:
+['scrapy.spidermiddlewares.httperror.HttpErrorMiddleware',
+ 'scrapy.spidermiddlewares.offsite.OffsiteMiddleware',
+ 'scrapy.spidermiddlewares.referer.RefererMiddleware',
+ 'scrapy.spidermiddlewares.urllength.UrlLengthMiddleware',
+ 'scrapy.spidermiddlewares.depth.DepthMiddleware']
+2025-05-16 17:56:56 [scrapy.middleware] INFO: Enabled item pipelines:
+['demo.pipelines.PostgresPipeline', 'demo.pipelines.S3StoragePipeline']
+2025-05-16 17:56:56 [quotes_spa] INFO: Authentication enabled → hitting login page
+2025-05-16 17:56:56 [scrapy.core.engine] INFO: Spider opened
+2025-05-16 17:56:57 [quotes_spa] INFO: Connected to S3 bucket: scraper-results
+2025-05-16 17:56:57 [scrapy.extensions.logstats] INFO: Crawled 0 pages (at 0 pages/min), scraped 0 items (at 0 items/min)
+2025-05-16 17:56:57 [quotes_spa] INFO: No cookies found in Redis
+2025-05-16 17:56:57 [scrapy.extensions.telnet] INFO: Telnet console listening on 127.0.0.1:6023
+2025-05-16 17:56:57 [demo.user_agent_middleware] INFO: Request to https://quotes.toscrape.com/login: Using User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36
+2025-05-16 17:56:57 [quotes_spa] INFO: Active Selenium sessions: 0/1
+2025-05-16 17:56:57 [quotes_spa] INFO: Applying User-Agent to Selenium: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36
+2025-05-16 17:56:57 [quotes_spa] INFO: 🌐 SELENIUM PROXY: http://tinyproxy1:8888
+2025-05-16 17:57:05 [quotes_spa] INFO: Attempting login with Selenium session ID: 44f12790a790b11228dc6c76337ef4ba
+2025-05-16 17:57:06 [quotes_spa] INFO: Login attempt #1/3 with username=admin, password=*****
+2025-05-16 17:57:12 [quotes_spa] INFO: ✅ Login successful!
+2025-05-16 17:57:12 [demo.user_agent_middleware] INFO: Request to https://quotes.toscrape.com/js/: Using User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36
+2025-05-16 17:57:12 [quotes_spa] INFO: Active Selenium sessions: 0/1
+2025-05-16 17:57:12 [quotes_spa] INFO: Applying User-Agent to Selenium: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36
+2025-05-16 17:57:12 [quotes_spa] INFO: 🌐 SELENIUM PROXY: http://tinyproxy1:8888
+2025-05-16 17:57:24 [quotes_spa] INFO: Using User-Agent for https://quotes.toscrape.com/js/: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36
+2025-05-16 17:57:24 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:24 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175724_520465_item1_c08ab872b5f38877_pxe6d0484a_8866.json
+2025-05-16 17:57:24 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:24 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175724_576895_item2_f392ea6f05099ecf_pxe6d0484a_8951.json
+2025-05-16 17:57:24 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:24 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175724_598675_item3_43773d896bbf1a49_pxe6d0484a_8115.json
+2025-05-16 17:57:24 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:24 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175724_645346_item4_92cc01da01cfd80e_pxe6d0484a_8912.json
+2025-05-16 17:57:24 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:24 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175724_673918_item5_e70ddfe56578f17e_pxe6d0484a_1745.json
+2025-05-16 17:57:24 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:24 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175724_698301_item6_79a8b255af9f79ce_pxe6d0484a_5243.json
+2025-05-16 17:57:24 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:24 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175724_722799_item7_e5bbe8d2a3a9f250_pxe6d0484a_4712.json
+2025-05-16 17:57:24 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:24 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175724_743438_item8_3f164bd6623fb942_pxe6d0484a_9080.json
+2025-05-16 17:57:24 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:24 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175724_763350_item9_351fa0377a1ae014_pxe6d0484a_4985.json
+2025-05-16 17:57:24 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:24 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175724_784861_item10_5fbea6b7d5f0bcc3_pxe6d0484a_7573.json
+2025-05-16 17:57:24 [demo.user_agent_middleware] INFO: Request to https://quotes.toscrape.com/js/page/2/: Using User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 Edg/91.0.864.37
+2025-05-16 17:57:24 [quotes_spa] INFO: Active Selenium sessions: 0/1
+2025-05-16 17:57:24 [quotes_spa] INFO: Applying User-Agent to Selenium: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 Edg/91.0.864.37
+2025-05-16 17:57:24 [quotes_spa] INFO: 🌐 SELENIUM PROXY: http://tinyproxy1:8888
+2025-05-16 17:57:28 [quotes_spa] INFO: Using User-Agent for https://quotes.toscrape.com/js/page/2/: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 Edg/91.0.864.37
+2025-05-16 17:57:28 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/2/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:28 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175728_955546_page2_item11_e6b0b9f5ff6e5b7c_pxe6d0484a_8229.json
+2025-05-16 17:57:28 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/2/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:29 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175728_990161_page2_item12_6b2b3d3d0a19546e_pxe6d0484a_1490.json
+2025-05-16 17:57:29 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/2/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:29 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175729_016363_page2_item13_c6d617a96e1640ec_pxe6d0484a_1560.json
+2025-05-16 17:57:29 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/2/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:29 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175729_053881_page2_item14_522e6d7f7282a950_pxe6d0484a_1383.json
+2025-05-16 17:57:29 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/2/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:29 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175729_079907_page2_item15_512239b732b67096_pxe6d0484a_8836.json
+2025-05-16 17:57:29 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/2/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:29 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175729_123028_page2_item16_4d73996542f54411_pxe6d0484a_3300.json
+2025-05-16 17:57:29 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/2/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:29 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175729_146809_page2_item17_8a9611f319f4b729_pxe6d0484a_5538.json
+2025-05-16 17:57:29 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/2/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:29 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175729_172668_page2_item18_fd9c180911119f72_pxe6d0484a_7231.json
+2025-05-16 17:57:29 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/2/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:29 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175729_278995_page2_item19_5f1bea32403b8c1e_pxe6d0484a_7498.json
+2025-05-16 17:57:29 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/2/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:29 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175729_327600_page2_item20_474667fcadd95cca_pxe6d0484a_1694.json
+2025-05-16 17:57:29 [demo.user_agent_middleware] INFO: Request to https://quotes.toscrape.com/js/page/3/: Using User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Safari/605.1.15
+2025-05-16 17:57:29 [quotes_spa] INFO: Active Selenium sessions: 0/1
+2025-05-16 17:57:29 [quotes_spa] INFO: Applying User-Agent to Selenium: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Safari/605.1.15
+2025-05-16 17:57:29 [quotes_spa] INFO: 🌐 SELENIUM PROXY: http://tinyproxy1:8888
+2025-05-16 17:57:33 [quotes_spa] INFO: Using User-Agent for https://quotes.toscrape.com/js/page/3/: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Safari/605.1.15
+2025-05-16 17:57:33 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/3/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:33 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175733_271820_page3_item21_4915047e38fcf202_pxe6d0484a_6804.json
+2025-05-16 17:57:33 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/3/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:33 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175733_299913_page3_item22_f1b63466efb71e16_pxe6d0484a_3527.json
+2025-05-16 17:57:33 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/3/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:33 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175733_328290_page3_item23_e9506efed2eb9e2a_pxe6d0484a_2603.json
+2025-05-16 17:57:33 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/3/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:33 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175733_372082_page3_item24_53103482e4a04ca2_pxe6d0484a_8930.json
+2025-05-16 17:57:33 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/3/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:33 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175733_412314_page3_item25_c68590dba1ea4c06_pxe6d0484a_9440.json
+2025-05-16 17:57:33 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/3/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:33 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175733_453845_page3_item26_31a3946450199c72_pxe6d0484a_8549.json
+2025-05-16 17:57:33 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/3/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:33 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175733_489322_page3_item27_79066f59184248cb_pxe6d0484a_7766.json
+2025-05-16 17:57:33 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/3/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:33 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175733_536254_page3_item28_c9746ff9143fa138_pxe6d0484a_2926.json
+2025-05-16 17:57:33 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/3/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:33 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175733_786183_page3_item29_17eca2287addc445_pxe6d0484a_1194.json
+2025-05-16 17:57:33 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/3/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:33 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175733_842866_page3_item30_6512ac30eec24feb_pxe6d0484a_7059.json
+2025-05-16 17:57:33 [demo.user_agent_middleware] INFO: Request to https://quotes.toscrape.com/js/page/4/: Using User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:89.0) Gecko/20100101 Firefox/89.0
+2025-05-16 17:57:33 [quotes_spa] INFO: Active Selenium sessions: 0/1
+2025-05-16 17:57:33 [quotes_spa] INFO: Applying User-Agent to Selenium: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:89.0) Gecko/20100101 Firefox/89.0
+2025-05-16 17:57:33 [quotes_spa] INFO: 🌐 SELENIUM PROXY: http://tinyproxy1:8888
+2025-05-16 17:57:36 [quotes_spa] INFO: Using User-Agent for https://quotes.toscrape.com/js/page/4/: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:89.0) Gecko/20100101 Firefox/89.0
+2025-05-16 17:57:36 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/4/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:36 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175736_973765_page4_item31_219a3524b9ac39b8_pxe6d0484a_4154.json
+2025-05-16 17:57:36 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/4/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:37 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175736_995019_page4_item32_a9e382208b01fd57_pxe6d0484a_7593.json
+2025-05-16 17:57:37 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/4/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:37 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175737_018563_page4_item33_45b9d65bfe7556e1_pxe6d0484a_2198.json
+2025-05-16 17:57:37 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/4/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:37 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175737_042057_page4_item34_9e11ec229f795dcf_pxe6d0484a_2744.json
+2025-05-16 17:57:37 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/4/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:37 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175737_065792_page4_item35_ade520a463ac353f_pxe6d0484a_6922.json
+2025-05-16 17:57:37 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/4/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:37 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175737_086617_page4_item36_9cfc96c0e191fe9b_pxe6d0484a_6970.json
+2025-05-16 17:57:37 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/4/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:37 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175737_113175_page4_item37_84b7f3439a7ef92c_pxe6d0484a_9853.json
+2025-05-16 17:57:37 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/4/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:37 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175737_137392_page4_item38_638c6ac32e0f736e_pxe6d0484a_3354.json
+2025-05-16 17:57:37 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/4/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:37 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175737_161815_page4_item39_49c0171391e384da_pxe6d0484a_1503.json
+2025-05-16 17:57:37 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/4/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:37 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175737_186156_page4_item40_94a0847ab15eca0b_pxe6d0484a_7905.json
+2025-05-16 17:57:37 [demo.user_agent_middleware] INFO: Request to https://quotes.toscrape.com/js/page/5/: Using User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36
+2025-05-16 17:57:37 [quotes_spa] INFO: Active Selenium sessions: 0/1
+2025-05-16 17:57:37 [quotes_spa] INFO: Applying User-Agent to Selenium: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36
+2025-05-16 17:57:37 [quotes_spa] INFO: 🌐 SELENIUM PROXY: http://tinyproxy1:8888
+2025-05-16 17:57:40 [quotes_spa] INFO: Using User-Agent for https://quotes.toscrape.com/js/page/5/: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36
+2025-05-16 17:57:40 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/5/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:40 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175740_581230_page5_item41_9ad8385a6147984f_pxe6d0484a_1472.json
+2025-05-16 17:57:40 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/5/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:40 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175740_639087_page5_item42_f3aff57ef09487a8_pxe6d0484a_7638.json
+2025-05-16 17:57:40 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/5/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:40 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175740_684656_page5_item43_a19343ffacb1f99e_pxe6d0484a_7822.json
+2025-05-16 17:57:40 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/5/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:40 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175740_729364_page5_item44_3ec205449f0c1643_pxe6d0484a_4607.json
+2025-05-16 17:57:40 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/5/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:40 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175740_783987_page5_item45_9a950113523ee2d5_pxe6d0484a_8059.json
+2025-05-16 17:57:40 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/5/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:40 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175740_819188_page5_item46_dce2517d62012203_pxe6d0484a_9670.json
+2025-05-16 17:57:40 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/5/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:40 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175740_852489_page5_item47_0a81645afce98418_pxe6d0484a_6447.json
+2025-05-16 17:57:40 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/5/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:41 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175740_982850_page5_item48_55467ab99d1043ff_pxe6d0484a_9552.json
+2025-05-16 17:57:41 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/5/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:41 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175741_067920_page5_item49_99050512e86bbc00_pxe6d0484a_1297.json
+2025-05-16 17:57:41 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/5/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:41 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175741_135014_page5_item50_c1e475e40483fd93_pxe6d0484a_5903.json
+2025-05-16 17:57:41 [demo.user_agent_middleware] INFO: Request to https://quotes.toscrape.com/js/page/6/: Using User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0
+2025-05-16 17:57:41 [quotes_spa] INFO: Active Selenium sessions: 0/1
+2025-05-16 17:57:41 [quotes_spa] INFO: Applying User-Agent to Selenium: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0
+2025-05-16 17:57:41 [quotes_spa] INFO: 🌐 SELENIUM PROXY: http://tinyproxy1:8888
+2025-05-16 17:57:47 [quotes_spa] INFO: Using User-Agent for https://quotes.toscrape.com/js/page/6/: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0
+2025-05-16 17:57:47 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/6/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:47 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175747_050989_page6_item51_461c361897312d49_pxe6d0484a_3612.json
+2025-05-16 17:57:47 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/6/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:47 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175747_130931_page6_item52_5dd9aa66994156c1_pxe6d0484a_9184.json
+2025-05-16 17:57:47 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/6/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:47 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175747_161809_page6_item53_e0e995837cf5c455_pxe6d0484a_3034.json
+2025-05-16 17:57:47 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/6/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:47 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175747_184476_page6_item54_9be21a0cc7688330_pxe6d0484a_8808.json
+2025-05-16 17:57:47 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/6/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:47 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175747_212009_page6_item55_ce190b6d90479e11_pxe6d0484a_8593.json
+2025-05-16 17:57:47 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/6/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:47 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175747_242094_page6_item56_cf75e99bc8c78e7d_pxe6d0484a_7676.json
+2025-05-16 17:57:47 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/6/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:47 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175747_269845_page6_item57_0c2d3338c6372c79_pxe6d0484a_1744.json
+2025-05-16 17:57:47 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/6/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:57:47 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175747_299231_page6_item58_fd0b647edb85ea7f_pxe6d0484a_9598.json
+2025-05-16 17:57:47 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/6/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:03 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175747_339348_page6_item59_dacc67a3097e0b7e_pxe6d0484a_6157.json
+2025-05-16 17:58:03 [scrapy.extensions.logstats] INFO: Crawled 7 pages (at 7 pages/min), scraped 59 items (at 59 items/min)
+2025-05-16 17:58:03 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/6/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:03 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175803_394161_page6_item60_a83f0893cc4ce545_pxe6d0484a_8364.json
+2025-05-16 17:58:03 [demo.user_agent_middleware] INFO: Request to https://quotes.toscrape.com/js/page/7/: Using User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:89.0) Gecko/20100101 Firefox/89.0
+2025-05-16 17:58:03 [quotes_spa] INFO: Active Selenium sessions: 0/1
+2025-05-16 17:58:03 [quotes_spa] INFO: Applying User-Agent to Selenium: Mozilla/5.0 (X11; Linux x86_64; rv:89.0) Gecko/20100101 Firefox/89.0
+2025-05-16 17:58:03 [quotes_spa] INFO: 🌐 SELENIUM PROXY: http://tinyproxy1:8888
+2025-05-16 17:58:06 [quotes_spa] INFO: Using User-Agent for https://quotes.toscrape.com/js/page/7/: Mozilla/5.0 (X11; Linux x86_64; rv:89.0) Gecko/20100101 Firefox/89.0
+2025-05-16 17:58:06 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/7/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:06 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175806_586312_page7_item61_0cbe3d60601c741c_pxe6d0484a_7497.json
+2025-05-16 17:58:06 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/7/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:06 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175806_609049_page7_item62_d2260227216026d2_pxe6d0484a_8335.json
+2025-05-16 17:58:06 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/7/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:06 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175806_631889_page7_item63_88b1316be2c8b65d_pxe6d0484a_7209.json
+2025-05-16 17:58:06 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/7/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:06 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175806_660649_page7_item64_516e7ce4280746ad_pxe6d0484a_1839.json
+2025-05-16 17:58:06 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/7/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:06 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175806_689103_page7_item65_04cc3993282307f1_pxe6d0484a_4595.json
+2025-05-16 17:58:06 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/7/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:06 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175806_709217_page7_item66_cf174c7293499918_pxe6d0484a_4540.json
+2025-05-16 17:58:06 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/7/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:06 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175806_730773_page7_item67_180415a34b6c7fd2_pxe6d0484a_9488.json
+2025-05-16 17:58:06 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/7/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:06 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175806_751187_page7_item68_c144a485e2a28f16_pxe6d0484a_6728.json
+2025-05-16 17:58:06 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/7/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:06 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175806_781648_page7_item69_f1fe3d92a01b4aed_pxe6d0484a_9299.json
+2025-05-16 17:58:06 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/7/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:06 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175806_812488_page7_item70_893174f1d1bd540b_pxe6d0484a_7342.json
+2025-05-16 17:58:06 [demo.user_agent_middleware] INFO: Request to https://quotes.toscrape.com/js/page/8/: Using User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0
+2025-05-16 17:58:06 [quotes_spa] INFO: Active Selenium sessions: 0/1
+2025-05-16 17:58:06 [quotes_spa] INFO: Applying User-Agent to Selenium: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0
+2025-05-16 17:58:06 [quotes_spa] INFO: 🌐 SELENIUM PROXY: http://tinyproxy1:8888
+2025-05-16 17:58:10 [quotes_spa] INFO: Using User-Agent for https://quotes.toscrape.com/js/page/8/: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0
+2025-05-16 17:58:10 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/8/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:10 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175810_968817_page8_item71_c63d3aa1f2448917_pxe6d0484a_8559.json
+2025-05-16 17:58:10 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/8/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:11 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175810_993425_page8_item72_6320e76bdaf7145b_pxe6d0484a_5907.json
+2025-05-16 17:58:11 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/8/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:11 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175811_030135_page8_item73_5eaf96538b5e9b04_pxe6d0484a_2365.json
+2025-05-16 17:58:11 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/8/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:11 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175811_060123_page8_item74_55914af951aac8db_pxe6d0484a_1402.json
+2025-05-16 17:58:11 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/8/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:11 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175811_091586_page8_item75_07959fb28b1154d4_pxe6d0484a_7480.json
+2025-05-16 17:58:11 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/8/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:11 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175811_126174_page8_item76_15c821f56455d19b_pxe6d0484a_5726.json
+2025-05-16 17:58:11 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/8/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:11 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175811_179248_page8_item77_89af743a94a6283b_pxe6d0484a_4835.json
+2025-05-16 17:58:11 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/8/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:11 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175811_204638_page8_item78_b398facda407201e_pxe6d0484a_9487.json
+2025-05-16 17:58:11 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/8/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:11 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175811_563920_page8_item79_8e52de74f64065bb_pxe6d0484a_4483.json
+2025-05-16 17:58:11 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/8/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:11 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175811_597443_page8_item80_5c2f611a54b77f43_pxe6d0484a_1608.json
+2025-05-16 17:58:11 [demo.user_agent_middleware] INFO: Request to https://quotes.toscrape.com/js/page/9/: Using User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 Edg/91.0.864.37
+2025-05-16 17:58:11 [quotes_spa] INFO: Active Selenium sessions: 0/1
+2025-05-16 17:58:11 [quotes_spa] INFO: Applying User-Agent to Selenium: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 Edg/91.0.864.37
+2025-05-16 17:58:11 [quotes_spa] INFO: 🌐 SELENIUM PROXY: http://tinyproxy1:8888
+2025-05-16 17:58:14 [quotes_spa] INFO: Using User-Agent for https://quotes.toscrape.com/js/page/9/: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 Edg/91.0.864.37
+2025-05-16 17:58:14 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/9/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:15 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175814_980791_page9_item81_9732f29f936db369_pxe6d0484a_6450.json
+2025-05-16 17:58:15 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/9/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:15 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175815_019472_page9_item82_e756ca1d8cf55c5f_pxe6d0484a_8653.json
+2025-05-16 17:58:15 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/9/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:15 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175815_064765_page9_item83_ec29bcd52572d82b_pxe6d0484a_1714.json
+2025-05-16 17:58:15 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/9/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:15 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175815_096212_page9_item84_d3daad3af3adae1b_pxe6d0484a_8988.json
+2025-05-16 17:58:15 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/9/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:15 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175815_132518_page9_item85_6fc8193ef55b1f87_pxe6d0484a_2137.json
+2025-05-16 17:58:15 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/9/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:15 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175815_167553_page9_item86_733459590b9a5080_pxe6d0484a_8075.json
+2025-05-16 17:58:15 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/9/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:15 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175815_208854_page9_item87_08e9101402c4c17c_pxe6d0484a_1669.json
+2025-05-16 17:58:15 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/9/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:15 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175815_252718_page9_item88_8553b8312699c52c_pxe6d0484a_3409.json
+2025-05-16 17:58:15 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/9/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:15 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175815_297146_page9_item89_96bb731d3d92b5cb_pxe6d0484a_4767.json
+2025-05-16 17:58:15 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/9/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:15 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175815_322991_page9_item90_84b707d5561f5d4f_pxe6d0484a_8722.json
+2025-05-16 17:58:15 [demo.user_agent_middleware] INFO: Request to https://quotes.toscrape.com/js/page/10/: Using User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 Edg/91.0.864.37
+2025-05-16 17:58:15 [quotes_spa] INFO: Active Selenium sessions: 0/1
+2025-05-16 17:58:15 [quotes_spa] INFO: Applying User-Agent to Selenium: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 Edg/91.0.864.37
+2025-05-16 17:58:15 [quotes_spa] INFO: 🌐 SELENIUM PROXY: http://tinyproxy1:8888
+2025-05-16 17:58:37 [quotes_spa] INFO: Using User-Agent for https://quotes.toscrape.com/js/page/10/: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 Edg/91.0.864.37
+2025-05-16 17:58:37 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/10/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:37 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175837_407508_page10_item91_a0b11df03ee74f4f_pxe6d0484a_4884.json
+2025-05-16 17:58:37 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/10/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:37 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175837_446174_page10_item92_473d4035641303b2_pxe6d0484a_8676.json
+2025-05-16 17:58:37 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/10/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:37 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175837_476264_page10_item93_6df7d2dd2c23aa31_pxe6d0484a_8493.json
+2025-05-16 17:58:37 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/10/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:37 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175837_504047_page10_item94_7272f2bd3f81c4d3_pxe6d0484a_5007.json
+2025-05-16 17:58:37 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/10/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:37 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175837_532827_page10_item95_26493a8c8fbe46a6_pxe6d0484a_2358.json
+2025-05-16 17:58:37 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/10/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:37 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175837_698068_page10_item96_85ac2896c1f4ae19_pxe6d0484a_8061.json
+2025-05-16 17:58:37 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/10/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:37 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175837_817213_page10_item97_2029b470e0929503_pxe6d0484a_5087.json
+2025-05-16 17:58:37 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/10/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:37 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175837_903708_page10_item98_bfe0c3eabeaa2f72_pxe6d0484a_7710.json
+2025-05-16 17:58:37 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/10/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:37 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175837_957531_page10_item99_3837dfc250cb4e4c_pxe6d0484a_8401.json
+2025-05-16 17:58:37 [quotes_spa] INFO: 📊 PIPELINE: Item from https://quotes.toscrape.com/js/page/10/ processed with proxy: http://tinyproxy1:8888
+2025-05-16 17:58:38 [quotes_spa] INFO: Stored item in S3: quotes_data/quotes_spa/2025-05-16/quotes_spa_20250516_175837_988723_page10_item100_39ca1f52b18fb215_pxe6d0484a_3631.json
+2025-05-16 17:58:38 [scrapy.core.engine] INFO: Closing spider (finished)
+2025-05-16 17:58:38 [quotes_spa] INFO: Total items stored in S3: 100
+2025-05-16 17:58:38 [quotes_spa] INFO: Spider closing: finished
+2025-05-16 17:58:38 [quotes_spa] INFO: Spider shutting down, clearing active Selenium sessions
+2025-05-16 17:58:38 [quotes_spa] INFO: Called API gateway to reset sessions: 200
+2025-05-16 17:58:38 [quotes_spa] INFO: Spider closed successfully
+2025-05-16 17:58:38 [quotes_spa] INFO: Shutting down Selenium driver pool (0 drivers)
+2025-05-16 17:58:38 [scrapy.extensions.feedexport] INFO: Stored jsonlines feed (100 items) in: file:///var/lib/scrapyd/items/demo-1.0-py3.10/quotes_spa/test_final_fix4.jl
+2025-05-16 17:58:38 [scrapy.statscollectors] INFO: Dumping Scrapy stats:
+{'downloader/response_bytes': 95488,
+ 'downloader/response_count': 11,
+ 'downloader/response_status_count/200': 11,
+ 'elapsed_time_seconds': 100.745629,
+ 'feedexport/success_count/FileFeedStorage': 1,
+ 'finish_reason': 'finished',
+ 'finish_time': datetime.datetime(2025, 5, 16, 17, 58, 38, 18362),
+ 'item_scraped_count': 100,
+ 'log_count/INFO': 282,
+ 'log_count/WARNING': 1,
+ 'memusage/max': 100614144,
+ 'memusage/startup': 98222080,
+ 'request_depth_max': 10,
+ 'response_received_count': 11,
+ 'scheduler/dequeued': 11,
+ 'scheduler/dequeued/memory': 11,
+ 'scheduler/enqueued': 11,
+ 'scheduler/enqueued/memory': 11,
+ 'start_time': datetime.datetime(2025, 5, 16, 17, 56, 57, 272733)}
+2025-05-16 17:58:38 [scrapy.core.engine] INFO: Spider closed (finished)

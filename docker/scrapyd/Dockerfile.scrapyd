@@ -1,0 +1,38 @@
+FROM vimagick/scrapyd:latest
+
+# Install selenium, Redis and other required packages
+RUN apt-get update && apt-get install -y \
+    wget \
+    unzip \
+    curl
+
+# Install Selenium and other dependencies
+RUN pip install --no-cache-dir --break-system-packages \
+    selenium==4.10.0 \
+    selenium-wire \
+    webdriver-manager \
+    scrapy-prometheus-exporter \
+    psutil \
+    redis \
+    requests \
+    cryptography \
+    bs4 \
+    psycopg2-binary \
+    boto3 \
+    botocore
+
+# Install ScrapydWeb
+RUN pip install --break-system-packages scrapydweb[logparser]
+
+# Create directory for custom middleware
+RUN mkdir -p /app/custom_middleware
+
+# Copy metrics middleware
+COPY metrics_middleware.py /app/custom_middleware/
+
+# Install Prometheus exporter
+COPY scrapyd_exporter.py /app/scrapyd_exporter.py
+
+# Expose the port
+EXPOSE 6800
+EXPOSE 9410

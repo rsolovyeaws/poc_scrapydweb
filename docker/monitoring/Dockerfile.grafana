@@ -1,0 +1,28 @@
+FROM grafana/grafana:9.5.2
+
+# Copy dashboard provisioning configuration
+COPY grafana/dashboards /etc/grafana/provisioning/dashboards
+
+# Copy datasource provisioning configuration
+COPY grafana/datasources /etc/grafana/provisioning/datasources
+
+# Set anonymous authentication to view dashboards without login
+ENV GF_AUTH_ANONYMOUS_ENABLED=true
+ENV GF_AUTH_BASIC_ENABLED=false
+ENV GF_SECURITY_ADMIN_PASSWORD=admin
+
+# Expose port 3000
+EXPOSE 3000
+
+USER root
+
+# Use numeric ID directly to avoid user/group name issues
+RUN chown -R 472:472 /etc/grafana/provisioning/
+
+USER grafana
+
+RUN mkdir -p /var/lib/grafana/dashboards
+COPY ./grafana-dashboards/*.json /var/lib/grafana/dashboards/
+
+# Note: We're using UID/GID 472 which is the standard for Grafana
+# The grafana/grafana image is already configured to run as this user 
