@@ -32,8 +32,8 @@ scrape_configs:
     metrics_path: /metrics
     static_configs:
       - targets:
-          - scrapyd1:6800
-          - scrapyd2:6800
+          - scrapyd1:9410
+          - scrapyd2:9410
     
   - job_name: api-gateway
     metrics_path: /metrics

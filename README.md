@@ -466,12 +466,30 @@ API Gateway: http://localhost:5001
 1. Откройте [Kibana](http://localhost:5601)
 2. При первом входе необходимо настроить индекс:
    - Перейдите в Management > Stack Management > Index Patterns
-   - Создайте индекс с шаблоном `filebeat-*`
-   - Выберите `@timestamp` в качестве поля времени
+   - Нажмите "Create index pattern"
+   - Введите `filebeat-*` в поле "Index pattern name"
+   - Нажмите "Next step"
+   - Выберите `@timestamp` в качестве поля времени (Time field)
+   - Нажмите "Create index pattern"
 3. Для просмотра логов перейдите в Analytics > Discover
 4. Используйте фильтры для поиска логов конкретного сервиса или паука:
    - `container.name: scrapyd1` - логи первого инстанса Scrapyd
-   - `spider_name: example` - логи конкретного паука
+   - `container.name: scrapyd2` - логи второго инстанса Scrapyd
+   - `log_type: spider_logs` - логи спайдеров
+   - `spider_name: quotes_spa` - логи конкретного паука
+   - `message: *job_id*` - поиск по ID задания
+
+#### Поиск логов завершенных заданий:
+
+Для поиска логов определенного задания, выполните следующие шаги:
+
+1. Откройте Discover в Kibana
+2. В поле запроса (KQL) введите:
+   ```
+   container.name: (scrapyd1 or scrapyd2) and message: "*имя_паука*" and message: "*job_id*"
+   ```
+3. Настройте временной диапазон в правом верхнем углу, чтобы охватить период работы паука
+4. Для улучшения читаемости логов, вы можете добавить поля `message` и `log.file.path` в список отображаемых полей
 
 ### Система мониторинга метрик
 
@@ -487,7 +505,18 @@ API Gateway: http://localhost:5001
 1. Откройте [Grafana](http://localhost:3000)
 2. Войдите с учетными данными (по умолчанию admin/admin)
 3. Перейдите в раздел Dashboards
-4. Выберите дашборд "Scrapy Container Metrics" для просмотра метрик использования ресурсов контейнерами
+4. Выберите дашборд "Scraper Dashboard" для просмотра метрик использования ресурсов контейнерами
+
+Дашборд "Scraper Dashboard" отображает следующие метрики:
+
+- **CPU Usage**: Показывает загрузку CPU для каждого экземпляра Scrapyd. Данные поступают из `scrapyd_exporter.py`, который использует `psutil` для мониторинга процесса Scrapyd.
+- **Memory Usage**: Отображает использование памяти каждым экземпляром Scrapyd. Данные также собираются `scrapyd_exporter.py` с помощью `psutil`.
+- **Active Spiders**: Текущее количество активных (выполняющихся) пауков на всех экземплярах Scrapyd. Метрика `scrapyd_running_jobs` из `scrapyd_exporter.py`, которая агрегирует данные API Scrapyd (`/listjobs.json`).
+- **Requests Rate**: Частота завершенных задач (пауков) за последние 5 минут. Используется метрика `scrapyd_finished_jobs_total` из `scrapyd_exporter.py`.
+- **System Stats**:
+    - **Scrapyd Status**: Статус доступности каждого экземпляра Scrapyd (1 - доступен, 0 - недоступен). Метрика `scrapyd_up` из `scrapyd_exporter.py` (основана на ответе `/daemonstatus.json`).
+    - **Pending Jobs**: Общее количество задач, ожидающих выполнения. Метрика `scrapyd_pending_jobs` из `scrapyd_exporter.py` (агрегирует данные `/listjobs.json`).
+- **Recent Logs**: Таблица с последними записями из лог-файлов пауков. Данные для этой панели (`scrapyd_log_entry`) собираются `scrapyd_exporter.py` путем чтения последних строк из файлов в директории `/var/lib/scrapyd/logs` каждого экземпляра Scrapyd. Отображаются поля: `project`, `spider`, `filename`, `timestamp`, `content`.
 
 ### Система оповещений
 

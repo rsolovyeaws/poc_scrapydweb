@@ -10,10 +10,31 @@ filebeat.inputs:
         target: "json"
         overwrite_keys: true
 
+- type: log
+  paths:
+    - '/app/spider_logs/demo-1.0-py3.10/quotes_spa/*.log'
+    - '/app/spider_logs/demo-1.0-py3.10/*/*.log'
+    - '/app/spider_logs/**/*.log'
+  fields:
+    log_type: spider_logs
+    spider_project: "demo"
+  fields_under_root: true
+  multiline:
+    pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+    negate: true
+    match: after
+  encoding: utf-8
+  scan_frequency: 10s
+  harvester_buffer_size: 16384
+
 processors:
   - add_host_metadata: ~
   - add_cloud_metadata: ~
   - add_docker_metadata: ~
+  - add_fields:
+      target: ''
+      fields:
+        scrapy_logs: true
 
 output.elasticsearch:
   hosts: ["elasticsearch:9200"]
@@ -29,4 +50,5 @@ setup.ilm:
   pattern: "{now/d}-000001"
   
 logging.json: true
-logging.metrics.enabled: false 
+logging.metrics.enabled: false
+logging.level: debug 
