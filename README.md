@@ -127,8 +127,6 @@ nano .env
 14. **task-processor** - сервис для обработки заданий из очереди RabbitMQ
 15. **elasticsearch, kibana, filebeat** - стек ELK для сбора и анализа логов
 16. **prometheus, grafana, cadvisor, node-exporter** - система мониторинга метрик
-17. **alertmanager, telegram-alerts** - система оповещений
-
 
 ## Примеры использования
 
@@ -303,16 +301,10 @@ User-Agent + Proxy
 Перед использованием утилиты `publish_rabbitmq_task.py` необходимо создать виртуальное окружение и установить зависимости:
 
 ```bash
-# Создание виртуального окружения
 python3 -m venv .venv
 
-# Активация виртуального окружения
-# Для Linux/Mac:
 source .venv/bin/activate
-# Для Windows:
-# .venv\Scripts\activate
 
-# Установка зависимостей
 pip install -r requirements.txt
 ```
 
