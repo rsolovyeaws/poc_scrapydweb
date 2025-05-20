@@ -1,7 +1,7 @@
 services:
   scrapyd1:
     build:
-      context: .
+      context: ./docker/scrapyd
       dockerfile: Dockerfile.scrapyd
     container_name: scrapyd1
     environment:
@@ -10,17 +10,18 @@ services:
       - "6800:6800"
       - "9410:9410"
     volumes:
-      - ./shared-eggs:/root/.scrapyd/eggs
-      - ./deploy_eggs.sh:/deploy_eggs.sh
-      - ./scrapyd_exporter.py:/app/scrapyd_exporter.py
+      - ./docker/shared-eggs:/root/.scrapyd/eggs
+      - ./docker/scrapyd/deploy_eggs.sh:/deploy_eggs.sh
+      - ./docker/scrapyd/scrapyd_exporter.py:/app/scrapyd_exporter.py
       - ./data/cookies:/data/cookies # Volume for persistent cookies
+      - ./logs/scrapyd:/var/lib/scrapyd/logs # Map spider logs to local directory
     entrypoint: /deploy_eggs.sh
     networks:
       - scraper-network
 
   scrapyd2:
     build:
-      context: .
+      context: ./docker/scrapyd
       dockerfile: Dockerfile.scrapyd
     container_name: scrapyd2
     environment:
@@ -29,10 +30,11 @@ services:
       - "6801:6800"
       - "9411:9410"
     volumes:
-      - ./shared-eggs:/root/.scrapyd/eggs
-      - ./deploy_eggs.sh:/deploy_eggs.sh
-      - ./scrapyd_exporter.py:/app/scrapyd_exporter.py
+      - ./docker/shared-eggs:/root/.scrapyd/eggs
+      - ./docker/scrapyd/deploy_eggs.sh:/deploy_eggs.sh
+      - ./docker/scrapyd/scrapyd_exporter.py:/app/scrapyd_exporter.py
       - ./data/cookies:/data/cookies # Volume for persistent cookies
+      - ./logs/scrapyd:/var/lib/scrapyd/logs # Map spider logs to local directory
     entrypoint: /deploy_eggs.sh
     networks:
       - scraper-network
@@ -44,7 +46,10 @@ services:
       - scrapyd1
       - scrapyd2
     volumes:
-      - ./scrapydweb_settings_v11.py:/app/scrapydweb_settings_v11.py
+      - ./config/scrapydweb_settings_v11.py:/app/scrapydweb_settings_v11.py
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
     ports:
       - "5000:5000"
     networks:
@@ -100,7 +105,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-db:/docker-entrypoint-initdb.d
+      - ./database/init-db:/docker-entrypoint-initdb.d
     networks:
       - scraper-network
 
@@ -125,8 +130,8 @@ services:
     ports:
       - "8800:80"
     volumes:
-      - ./custom_nginx_config/nginx.conf:/etc/nginx/nginx.conf
-      - ./custom_nginx_config/default.conf:/etc/nginx/conf.d/default.conf
+      - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./config/nginx/default.conf:/etc/nginx/conf.d/default.conf
     depends_on:
       - scrapyd1
       - scrapyd2
@@ -136,7 +141,7 @@ services:
   # API Gateway for automatic task distribution
   api-gateway:
     build:
-      context: ./api-gateway
+      context: ./services/api-gateway
       dockerfile: Dockerfile
     container_name: api-gateway
     ports:
@@ -256,7 +261,7 @@ services:
   # Task processor service for consuming messages from RabbitMQ
   task-processor:
     build:
-      context: ./task-processor
+      context: ./services/task-processor
       dockerfile: Dockerfile
     container_name: task-processor
     depends_on:
@@ -317,9 +322,10 @@ services:
     container_name: filebeat
     user: root
     volumes:
-      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml
+      - ./config/filebeat.yml:/usr/share/filebeat/filebeat.yml
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./logs/scrapyd:/logs/scrapyd:ro # Add volume for scrapyd logs
     networks:
       - scraper-network
     depends_on:
@@ -337,8 +343,8 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./prometheus_rules.yml:/etc/prometheus/prometheus_rules.yml
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./config/prometheus_rules.yml:/etc/prometheus/prometheus_rules.yml
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -354,7 +360,7 @@ services:
   # Grafana for metrics visualization
   grafana:
     build:
-      context: .
+      context: ./docker/monitoring
       dockerfile: Dockerfile.grafana
     container_name: grafana
     ports:
@@ -384,101 +390,11 @@ services:
       - scraper-network
     restart: unless-stopped
 
-  # Node Exporter for host metrics
-  node-exporter:
-    image: prom/node-exporter:v1.5.0
-    container_name: node-exporter
-    volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
-    command:
-      - '--path.procfs=/host/proc'
-      - '--path.sysfs=/host/sys'
-      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
-    ports:
-      - "9100:9100"
-    networks:
-      - scraper-network
-    restart: unless-stopped
-
-  # Alertmanager for alerts
-  alertmanager:
-    image: prom/alertmanager:v0.25.0
-    container_name: alertmanager
-    ports:
-      - "9093:9093"
-    volumes:
-      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml.template
-    command:
-      - '--config.file=/etc/alertmanager/alertmanager.yml'
-      - '--storage.path=/alertmanager'
-    env_file:
-      - .env
-    entrypoint:
-      - sh
-      - -c
-      - |
-        cat /etc/alertmanager/alertmanager.yml.template | sed "s/\$${TELEGRAM_CHAT_ID}/${TELEGRAM_CHAT_ID}/g" > /etc/alertmanager/alertmanager.yml && 
-        /bin/alertmanager --config.file=/etc/alertmanager/alertmanager.yml --storage.path=/alertmanager
-    networks:
-      - scraper-network
-    restart: unless-stopped
-
-  # Telegram alerts service
-  telegram-alerts:
-    build:
-      context: .
-      dockerfile: Dockerfile.telegram_alerts
-    container_name: telegram-alerts
-    ports:
-      - "8088:8080"
-    env_file:
-      - .env
-    environment:
-      - LOG_LEVEL=INFO
-      - SPAM_PROTECTION_SECONDS=60
-      - HTTP_PORT=8080
-    volumes:
-      - /tmp:/tmp
-    networks:
-      - scraper-network
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    restart: unless-stopped
-
-  # Стартовое уведомление (запускается один раз и завершается)
-  startup-notification:
-    build:
-      context: .
-      dockerfile: Dockerfile.telegram_alerts
-    container_name: startup-notification
-    env_file:
-      - .env
-    command: >
-      sh -c "python send_notification.py  --alertname='SystemStartup'  --severity='info'  '🚀 Система мониторинга запущена'  'Компоненты системы мониторинга:
-
-      ✅ Prometheus - сбор метрик ✅ Grafana - визуализация (http://localhost:3000) ✅ Elasticsearch - хранение логов ✅ Kibana - анализ логов (http://localhost:5601) ✅ Alertmanager - управление оповещениями
-
-      Система полностью готова к работе.'"
-    depends_on:
-      - telegram-alerts
-      - elasticsearch
-      - kibana
-      - prometheus
-      - grafana
-    networks:
-      - scraper-network
-    restart: "no"
-
   # Add the ua-rotator service to the docker-compose.yml file
   # This should be added as a service alongside the existing services
   ua-rotator:
     build:
-      context: ./ua-rotator
+      context: ./services/ua-rotator
       dockerfile: Dockerfile
     container_name: ua-rotator
     ports:
@@ -497,7 +413,7 @@ services:
   # Proxy rotation service
   proxy-rotator:
     build:
-      context: ./proxy-rotator
+      context: ./services/proxy-rotator
       dockerfile: Dockerfile
     container_name: proxy-rotator
     ports:
@@ -527,7 +443,7 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: ./shared-eggs
+      device: ./docker/shared-eggs
   postgres_data:
     driver: local
   minio_data:

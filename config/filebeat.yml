@@ -12,9 +12,9 @@ filebeat.inputs:
 
 - type: log
   paths:
-    - '/app/spider_logs/demo-1.0-py3.10/quotes_spa/*.log'
-    - '/app/spider_logs/demo-1.0-py3.10/*/*.log'
-    - '/app/spider_logs/**/*.log'
+    - '/logs/scrapyd/demo-1.0-py3.10/quotes_spa/*.log'
+    - '/logs/scrapyd/demo-1.0-py3.10/*/*.log'
+    - '/logs/scrapyd/**/*.log'
   fields:
     log_type: spider_logs
     spider_project: "demo"
