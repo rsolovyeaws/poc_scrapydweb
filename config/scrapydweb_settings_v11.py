@@ -28,7 +28,7 @@ POLL_ROUND_INTERVAL = 60  # Check jobs every 60 seconds
 POLL_REQUEST_INTERVAL = 10  # 10 seconds between requests while polling
 
 # Alert triggers for job events
-ON_JOB_RUNNING_INTERVAL = True  # Don't send alerts for running jobs
+ON_JOB_RUNNING_INTERVAL = 0  # Don't send alerts for running jobs
 ON_JOB_FINISHED = True  # Send alert when job finishes
 
 # Log level triggers
