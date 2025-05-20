@@ -127,32 +127,6 @@
 3. Разработан API для взаимодействия с RabbitMQ
 4. Реализована интеграция с существующей системой логирования
 
-```yaml
-# Добавлено в docker-compose.yml
-rabbitmq:
-  image: rabbitmq:3-management
-  container_name: scraper-rabbitmq
-  ports:
-    - "5672:5672"
-    - "15672:15672"
-  volumes:
-    - rabbitmq_data:/var/lib/rabbitmq
-  networks:
-    - scraper-network
-
-task-processor:
-  build:
-    context: ./task-processor
-    dockerfile: Dockerfile
-  container_name: task-processor
-  depends_on:
-    - rabbitmq
-    - scrapyd1
-    - scrapyd2
-  networks:
-    - scraper-network
-```
-
 ### 5. Ротация User-Agent (ВЫПОЛНЕНО)
 
 #### Реализовано:
@@ -176,26 +150,6 @@ user_agent_type:
 2. Добавить автоматическое перезапуск контейнеров при сбоях
 3. Реализовать механизм возобновления работы пауков после сбоев
 
-```yaml
-# Пример модификации для существующих сервисов
-scrapyd1:
-  # ... существующая конфигурация ...
-  healthcheck:
-    test: ["CMD", "curl", "-f", "http://localhost:6800"]
-    interval: 30s
-    timeout: 10s
-    retries: 3
-  restart: unless-stopped
-
-scrapyd2:
-  # ... существующая конфигурация ...
-  healthcheck:
-    test: ["CMD", "curl", "-f", "http://localhost:6800"]
-    interval: 30s
-    timeout: 10s
-    retries: 3
-  restart: unless-stopped
-```
 
 ### ✅ 7. Улучшение управления ресурсами Selenium и мониторинг (ВЫПОЛНЕНО)
 
@@ -229,48 +183,3 @@ scrapyd2:
 
 3. **Низкий приоритет**:
    - Дополнительные интеграции и улучшения
-
-## Схема архитектуры после завершения всех доработок
-
-```
-+----------------------------------+
-|          API Gateway             |
-+----------------------------------+
-            |       |
-  +---------+       +---------+
-  |                           |
-  v                           v
-+----------------+   +----------------+
-|    Scrapyd1    |   |    Scrapyd2    |
-+----------------+   +----------------+
-        |                   |
-        v                   v
-+----------------------------------+
-|          Load Balancer           |
-+----------------------------------+
-            |
-            v
-+----------------------------------+
-|       Selenium / Browsers        |
-+----------------------------------+
-            |
-            v
-+----------------------------------+
-|     Storage (Postgres, S3)       |
-+----------------------------------+
-            |
-            v
-+----------------------------------+
-|    Monitoring & Logging (ELK)    |
-+----------------------------------+
-            |
-            v
-+----------------------------------+
-|  Message Queue (RabbitMQ/Kafka)  |
-+----------------------------------+
-            |
-            v
-+----------------------------------+
-|       Session Management         |
-+----------------------------------+
-``` 

@@ -8,10 +8,10 @@ docker compose down -v
 # Prepare egg file for demo spider
 mkdir -p docker/shared-eggs
 rm -f docker/shared-eggs/demo-1.0-py3.10.egg
-cd old_root_files/demo_spider/
+cd spiders/demo_spider/
 python3 setup.py bdist_egg
 cd ../..
-cp old_root_files/demo_spider/dist/demo-1.0-py3.10.egg docker/shared-eggs/
+cp spiders/demo_spider/dist/demo-1.0-py3.10.egg docker/shared-eggs/
 
 # Start all services
 docker compose up --build -d
