@@ -68,7 +68,7 @@ cd ..
 ```
 5. Заполните telegram bot id и chat id в .env файле
 ```bash
-cp env.template .env
+cp .env.example .env
 nano .env
 ```
 6. Запустите скрипт, который соберет egg-файл паука и запустит все контейнеры
