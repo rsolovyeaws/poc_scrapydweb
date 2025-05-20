@@ -43,40 +43,37 @@
 ### Запуск
 
 1. Клонируйте репозиторий
-2. Cоберите образ scrapydweb
 ```bash
-cd scrapydweb
-docker build -t scrapydweb:latest .
-cd ..
-```
-3. Заполните telegram bot id и chat id в .env файле
-```bash
-cp .env.example .env
-nano .env
+git clone git@github.com:rsolovyeaws/poc_scrapydweb.git
 ```
 
-#### Получение Telegram токена и chat ID:
-
-1. **Создание Telegram бота:**
+2. **Создание Telegram бота:**
    - Обратитесь к [@BotFather](https://t.me/BotFather) в Telegram
    - Отправьте команду `/newbot`
    - Следуйте инструкциям по созданию бота
    - Сохраните полученный токен (например: `123456789:ABCDefGhIJKlmNoPQRsTUVwxyZ`)
 
-2. **Получение chat ID:**
+3. **Получение chat ID:**
    - Найдите бота [@RawDataBot](https://t.me/RawDataBot) в поиске Telegram
    - Нажмите кнопку "Start"
    - Бот отправит вам JSON с информацией о вашем аккаунте
    - Найдите в ответе поле `"chat"` и внутри него `"id"` - это ваш chat ID
    - Пример: `"chat":{"id":123456789,...}`
 
-3. **Обновите .env файл:**
-   - Добавьте полученные значения в файл .env:
+
    ```
-   TELEGRAM_BOT_TOKEN=123456789:ABCDefGhIJKlmNoPQRsTUVwxyZ
-   TELEGRAM_CHAT_ID=123456789
-   ```
-4. Запустите скрипт, который соберет egg-файл паука и запустит все контейнеры
+4. Cоберите образ scrapydweb
+```bash
+cd scrapydweb
+docker build -t scrapydweb:latest .
+cd ..
+```
+5. Заполните telegram bot id и chat id в .env файле
+```bash
+cp .env.example .env
+nano .env
+```
+6. Запустите скрипт, который соберет egg-файл паука и запустит все контейнеры
 ```bash
 ./restart.sh
 ```
