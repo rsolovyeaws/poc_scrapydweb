@@ -38,12 +38,23 @@
 
 - Docker и Docker Compose
 - Python 3.10+
+- Telegram bot, chatid
 
 ### Запуск
 
 1. Клонируйте репозиторий
-2. Соберите egg-файл для демо-паука и запустите контейнеры:
-
+2. Cоберите образ scrapydweb
+```bash
+cd scrapydweb
+docker build -t scrapydweb:latest .
+cd ..
+```
+3. Заполните telegram bot id и chat id в .env файле
+```bash
+cp .env.example .env
+nano .env
+```
+4. Запустите скрипт, который соберет egg-файл паука и запустит все контейнеры
 ```bash
 ./restart.sh
 ```

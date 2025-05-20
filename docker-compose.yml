@@ -47,6 +47,9 @@ services:
       - scrapyd2
     volumes:
       - ./config/scrapydweb_settings_v11.py:/app/scrapydweb_settings_v11.py
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
     ports:
       - "5000:5000"
     networks:
