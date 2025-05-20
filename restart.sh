@@ -20,8 +20,4 @@ docker compose up --build -d
 echo "Waiting for services to start up..." 
 sleep 10
 
-# Make sure the startup-notification is started after other services are ready
-echo "Ensuring startup notification is working..."
-docker compose up -d startup-notification
-
 echo "Restart completed. Check Telegram for startup notification."
