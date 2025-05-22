@@ -59,7 +59,7 @@ git clone git@github.com:rsolovyeaws/poc_scrapydweb.git
    - Бот отправит вам JSON с информацией о вашем аккаунте
    - Найдите в ответе поле `"chat"` и внутри него `"id"` - это ваш chat ID
    - Пример: `"chat":{"id":123456789,...}`
-   ```
+
 4. Cоберите образ scrapydweb
 ```bash
 cd scrapydweb
