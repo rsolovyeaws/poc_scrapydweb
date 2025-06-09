@@ -37,14 +37,18 @@ class SpiderTask(BaseModel):
         Returns:
             Dictionary with parameters for the Scrapyd API
         """
-        # Updated to match the API Gateway's expected format
+        # Start with the base parameters
         params = {
             "project": self.project,
             "spider": self.spider,
             "settings": self.settings or {},
-            "kwargs": self.args or {},
             "jobid": self.task_id
         }
+        
+        # Add spider arguments directly to params (not nested in kwargs)
+        # The scrapyd_client will wrap these in kwargs when calling the API Gateway
+        if self.args:
+            params.update(self.args)
         
         # Add authentication parameters if enabled
         if self.auth_enabled:

@@ -374,6 +374,22 @@ python publish_rabbitmq_task.py \
   --no-proxy-rotation 
 ```
 
+#### С настройками паука и отключенной авторизацией:
+
+```bash
+# Запуск с пользовательскими настройками паука
+python publish_rabbitmq_task.py \
+  --project govuk_company_scraper-0.1.0-py3.12 \
+  --spider govuk_companies \
+  --setting "sic_code=10390" \
+  --setting "statuses=active" \
+  --setting "max_pages=1" \
+  --setting "include_people=true" \
+  --use-proxy-rotation \
+  --user-agent-type desktop \
+  --no-auth
+```
+
 ### Мониторинг использования proxy и User Agent
 
 Информация об используемом прокси и User Agent записывается в логи и сохраняется вместе с данными в PostgreSQL и S3-хранилище. 

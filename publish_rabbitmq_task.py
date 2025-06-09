@@ -127,7 +127,6 @@ if __name__ == "__main__":
         "setting=CLOSESPIDER_PAGECOUNT": "0",
         "setting=CLOSESPIDER_TIMEOUT": "60",
         "setting=LOG_LEVEL": "INFO",  # Changed from DEBUG to INFO
-        "arg1": "val1",
         "auth_enabled": "true",
         "username": "admin",
         "password": "admin",
@@ -152,6 +151,7 @@ if __name__ == "__main__":
     parser.add_argument("--setting", action="append", help="Spider settings (key=value)")
     parser.add_argument("--arg", action="append", help="Spider arguments (key=value)")
     parser.add_argument("--auth", action="store_true", help="Enable authentication")
+    parser.add_argument("--no-auth", action="store_true", help="Disable authentication")
     parser.add_argument("--username", help="Auth username")
     parser.add_argument("--password", help="Auth password")
     
@@ -207,6 +207,8 @@ if __name__ == "__main__":
     # Auth parameters
     if args.auth:
         params["auth_enabled"] = "true"
+    elif args.no_auth:
+        params["auth_enabled"] = "false"
     if args.username:
         params["username"] = args.username
     if args.password:
