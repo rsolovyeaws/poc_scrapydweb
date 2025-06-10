@@ -34,8 +34,13 @@ except Exception as e:
 # Start Scrapyd 
 scrapyd &
 
-# Wait for scrapyd to start
-sleep 5
+# Wait for scrapyd to start properly
+echo "Waiting for scrapyd to start..."
+until curl -f -s http://localhost:6800/daemonstatus.json > /dev/null; do
+    echo "Scrapyd not ready yet, waiting 2 seconds..."
+    sleep 2
+done
+echo "Scrapyd is ready!"
 
 # Start the Prometheus exporter in the background
 /usr/bin/python3 /app/scrapyd_exporter.py &
