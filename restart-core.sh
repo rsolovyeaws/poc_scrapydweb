@@ -1,0 +1,23 @@
+#!/bin/bash
+
+echo "Starting restart process..."
+
+# Stop all services
+docker compose down -v
+
+# Prepare egg file for demo spider
+# mkdir -p docker/shared-eggs
+# rm -f docker/shared-eggs/demo-1.0-py3.10.egg
+# cd spiders/demo_spider/
+# python3 setup.py bdist_egg
+# cd ../..
+# cp spiders/demo_spider/dist/demo-1.0-py3.10.egg docker/shared-eggs/
+
+# Start all services
+docker compose -f docker-compose.core.yml up --build -d
+
+# Wait for services to start
+echo "Waiting for services to start up..." 
+sleep 10
+
+echo "Restart completed. Check Telegram for startup notification."

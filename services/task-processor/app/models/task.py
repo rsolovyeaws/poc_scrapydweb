@@ -32,22 +32,26 @@ class SpiderTask(BaseModel):
     
     def to_scrapyd_params(self) -> Dict[str, Any]:
         """
-        Convert the task to parameters for Scrapyd API.
+        Convert the task to a flat dictionary of parameters for the ScrapydClient.
+        
+        The ScrapydClient is responsible for structuring this into the final 
+        payload for the API Gateway.
         
         Returns:
-            Dictionary with parameters for the Scrapyd API
+            A flat dictionary with all task parameters.
         """
         # Start with the base parameters
         params = {
             "project": self.project,
             "spider": self.spider,
-            "settings": self.settings or {},
-            "job_id": self.task_id,
-            "run_id": self.task_id
+            "jobid": self.task_id,  # Use task_id as the jobid for tracking
+            "run_id": self.task_id   # Pass task_id as run_id to the spider
         }
-        
-        # Add spider arguments directly to params (not nested in kwargs)
-        # The scrapyd_client will wrap these in kwargs when calling the API Gateway
+
+        if self.settings:
+            params["settings"] = self.settings
+
+        # Add spider arguments from the 'args' field
         if self.args:
             params.update(self.args)
         
