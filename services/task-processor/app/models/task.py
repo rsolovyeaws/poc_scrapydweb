@@ -42,7 +42,8 @@ class SpiderTask(BaseModel):
             "project": self.project,
             "spider": self.spider,
             "settings": self.settings or {},
-            "jobid": self.task_id
+            "job_id": self.task_id,
+            "run_id": self.task_id
         }
         
         # Add spider arguments directly to params (not nested in kwargs)

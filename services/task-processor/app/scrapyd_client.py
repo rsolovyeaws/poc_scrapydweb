@@ -38,13 +38,16 @@ class ScrapydClient:
             "kwargs": kwargs
         }
         
-        if "jobid" in kwargs:
+        if "job_id" in kwargs:
             payload["jobid"] = kwargs["jobid"]
+        
+        payload["settings"]["run_id"] = kwargs.get("job_id", "unknown")
         
         self.logger.info("Scheduling spider", 
                          project=project, 
                          spider=spider, 
-                         settings=settings)
+                         settings=settings,
+                         job_id=kwargs.get("job_id"))
         
         try:
             response = requests.post(endpoint, json=payload)
