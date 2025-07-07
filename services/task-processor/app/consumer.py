@@ -159,6 +159,7 @@ class RabbitMQConsumer:
             # Log the result
             self.logger.info("Scheduled spider task", 
                             task_id=task.task_id,
+                            run_id=response.get("run_id"),
                             job_id=response.get("jobid"),
                             status=response.get("status"))
             

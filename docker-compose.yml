@@ -6,6 +6,10 @@ services:
     container_name: scrapyd1
     environment:
       - SCRAPYD_EGGS_DIR=/root/.scrapyd/eggs
+      - MINIO_ENDPOINT=http://minio:9000          # Points to MinIO container
+      - MINIO_ACCESS_KEY=minio_user               # From MinIO service config
+      - MINIO_SECRET_KEY=minio_password           # From MinIO service config  
+      - MINIO_BUCKET_NAME=scraper-results     
     ports:
       - "6800:6800"
       - "9410:9410"
@@ -26,6 +30,10 @@ services:
     container_name: scrapyd2
     environment:
       - SCRAPYD_EGGS_DIR=/root/.scrapyd/eggs
+      - MINIO_ENDPOINT=http://minio:9000          # Points to MinIO container
+      - MINIO_ACCESS_KEY=minio_user               # From MinIO service config
+      - MINIO_SECRET_KEY=minio_password           # From MinIO service config  
+      - MINIO_BUCKET_NAME=scraper-results   
     ports:
       - "6801:6800"
       - "9411:9410"
